@@ -1,6 +1,17 @@
 import * as Schema from "effect/Schema"
 
-// actor types used across the system
+export const WorkspaceId = Schema.Struct({
+	workspace_id: Schema.UUID,
+})
+
+export const RecordId = Schema.Struct({
+	record_id: Schema.UUID,
+})
+
+export const ObjectId = Schema.Struct({
+	object_id: Schema.UUID,
+})
+
 export const ActorType = Schema.Literal(
 	"api-token",
 	"workspace-member",
@@ -43,3 +54,8 @@ export const RecordTag = Schema.Struct({
 })
 
 export const Tag = Schema.Union(WorkspaceMemberTag, RecordTag)
+
+export const DataStruct = <A, I, R>(schema: Schema.Schema<A, I, R>) =>
+	Schema.Struct({
+		data: schema,
+	})

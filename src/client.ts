@@ -1,9 +1,11 @@
 import { Config, Context, Effect, Layer, Schema } from "effect"
 import { AttioHttpClient, type AttioHttpClientOptions } from "./http-client.js"
-import { AttioMeta } from "./services/meta/index.js"
-import { AttioNotes } from "./services/notes/index.js"
-import { AttioTasks } from "./services/tasks/index.js"
-import { AttioWebhooks } from "./services/webhooks/index.js"
+import { AttioComments } from "./services/comments.js"
+import { AttioMeta } from "./services/meta.js"
+import { AttioNotes } from "./services/notes.js"
+import { AttioTasks } from "./services/tasks.js"
+import { AttioThreads } from "./services/threads.js"
+import { AttioWebhooks } from "./services/webhooks.js"
 
 const genericTag =
 	<Self, Shape>() =>
@@ -45,6 +47,8 @@ export const AttioClient =
 					) => Effect.Effect<{ data: Array<Schema.Schema.Type<S[K]>> }, never>
 				}
 			} & {
+				comments: AttioComments
+				threads: AttioThreads
 				tasks: AttioTasks
 				notes: AttioNotes
 				meta: AttioMeta
@@ -56,12 +60,14 @@ export const AttioClient =
 					Layer.effect(
 						tag,
 						Effect.gen(function* () {
+							const comments = yield* AttioComments
+							const threads = yield* AttioThreads
 							const tasks = yield* AttioTasks
 							const notes = yield* AttioNotes
 							const meta = yield* AttioMeta
 							const webhooks = yield* AttioWebhooks
 
-							return new Proxy({ tasks, notes, meta, webhooks } as any, {
+							return new Proxy({ comments, threads, tasks, notes, meta, webhooks } as any, {
 								get(target, resource: string) {
 									// Check if it's a specialized service
 									if (resource in target) {
@@ -125,7 +131,7 @@ export const AttioClient =
 							})
 						}),
 					).pipe(
-						Layer.provide(Layer.mergeAll(AttioTasks.Default, AttioNotes.Default, AttioMeta.Default, AttioWebhooks.Default)),
+						Layer.provide(Layer.mergeAll(AttioComments.Default, AttioThreads.Default, AttioTasks.Default, AttioNotes.Default, AttioMeta.Default, AttioWebhooks.Default)),
 						Layer.provide(Layer.mergeAll(AttioHttpClient.Default(opts))),
 					)
 			},

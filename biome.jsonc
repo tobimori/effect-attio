@@ -5,4 +5,11 @@
 			"semicolons": "asNeeded",
 		},
 	},
+	"linter": {
+		"rules": {
+			"suspicious": {
+				"noExplicitAny": "off",
+			},
+		},
+	},
 }

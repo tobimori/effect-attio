@@ -27,27 +27,27 @@ const program = Effect.gen(function* () {
 	const newTask = yield* attio.tasks.create({
 		content: "Test task from Effect client",
 		format: "plaintext",
-		deadlineAt: (yield* DateTime.now).pipe(DateTime.addDuration("7 days")),
-		isCompleted: false,
-		linkedRecords: [],
+		deadline_at: (yield* DateTime.now).pipe(DateTime.addDuration("7 days")),
+		is_completed: false,
+		linked_records: [],
 		assignees: [],
 	})
 	console.log("Created task:", newTask)
 
 	// Get the task we just created
-	const fetchedTask = yield* attio.tasks.get(newTask.id.taskId)
+	const fetchedTask = yield* attio.tasks.get(newTask.id.task_id)
 	console.log("Fetched task:", fetchedTask)
 
 	// Update the task - mark it as completed and change deadline
-	const updatedTask = yield* attio.tasks.update(newTask.id.taskId, {
-		isCompleted: true,
-		deadlineAt: (yield* DateTime.now).pipe(DateTime.addDuration("14 days")),
+	const updatedTask = yield* attio.tasks.update(newTask.id.task_id, {
+		is_completed: true,
+		deadline_at: (yield* DateTime.now).pipe(DateTime.addDuration("14 days")),
 	})
 	console.log("Updated task:", updatedTask)
 
 	// Delete the task we just created
-	yield* attio.tasks.delete(newTask.id.taskId)
-	console.log(`Deleted task ${newTask.id.taskId}`)
+	yield* attio.tasks.delete(newTask.id.task_id)
+	console.log(`Deleted task ${newTask.id.task_id}`)
 
 	// Create a person
 	const person = yield* attio.people.create({

@@ -1,5 +1,5 @@
-import * as Schema from "effect/Schema"
-import * as Schemas from "./schemas"
+import type * as Schema from "effect/Schema"
+import type * as Schemas from "./schemas.js"
 
 // exported types for public consumption
 export type Task = Schema.Schema.Type<typeof Schemas.Task>

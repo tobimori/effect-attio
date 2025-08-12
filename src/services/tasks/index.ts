@@ -19,17 +19,13 @@ export class AttioTasks extends Effect.Service<AttioTasks>()("AttioTasks", {
 			 * Required scopes: `task:read`, `object_configuration:read`, `record_permission:read`, `user_management:read`
 			 */
 			list: Effect.fn("tasks.list")(function* (params?: Types.TaskListParams) {
-				const apiParams = params
-					? yield* Schema.encodeUnknown(Schemas.TaskListParamsTransform)(params)
-					: undefined
 				return yield* HttpClientRequest.get("/v2/tasks").pipe(
-					HttpClientRequest.appendUrlParams(apiParams),
+					HttpClientRequest.appendUrlParams(params),
 					http.execute,
 					Effect.flatMap(
-						HttpClientResponse.schemaBodyJson(
-							Schemas.TaskListResponseTransform,
-						),
+						HttpClientResponse.schemaBodyJson(Schemas.TaskListResponse),
 					),
+					Effect.map((result) => result.data),
 				)
 			}),
 
@@ -41,13 +37,16 @@ export class AttioTasks extends Effect.Service<AttioTasks>()("AttioTasks", {
 			 * Required scopes: `task:read-write`, `object_configuration:read`, `record_permission:read`, `user_management:read`
 			 */
 			create: Effect.fn("tasks.create")(function* (task: Types.TaskInput) {
-				const body = yield* Schema.encodeUnknown(Schemas.TaskInputTransform)(task)
+				const body = yield* Schema.encodeUnknown(Schemas.TaskInputRequest)({
+					data: task,
+				})
 				return yield* HttpClientRequest.post("/v2/tasks").pipe(
 					HttpClientRequest.bodyJson(body),
 					Effect.flatMap(http.execute),
 					Effect.flatMap(
-						HttpClientResponse.schemaBodyJson(Schemas.TaskResponseTransform),
+						HttpClientResponse.schemaBodyJson(Schemas.TaskResponse),
 					),
+					Effect.map((result) => result.data),
 				)
 			}),
 
@@ -57,13 +56,12 @@ export class AttioTasks extends Effect.Service<AttioTasks>()("AttioTasks", {
 			 * Required scopes: `task:read`, `object_configuration:read`, `record_permission:read`, `user_management:read`
 			 */
 			get: Effect.fn("tasks.get")(function* (taskId: string) {
-				return yield* http
-					.get(`/v2/tasks/${taskId}`)
-					.pipe(
-						Effect.flatMap(
-							HttpClientResponse.schemaBodyJson(Schemas.TaskResponseTransform),
-						),
-					)
+				return yield* http.get(`/v2/tasks/${taskId}`).pipe(
+					Effect.flatMap(
+						HttpClientResponse.schemaBodyJson(Schemas.TaskResponse),
+					),
+					Effect.map((result) => result.data),
+				)
 			}),
 
 			/**
@@ -87,13 +85,16 @@ export class AttioTasks extends Effect.Service<AttioTasks>()("AttioTasks", {
 				taskId: string,
 				task: Types.TaskUpdate,
 			) {
-				const body = yield* Schema.encodeUnknown(Schemas.TaskUpdateTransform)(task)
+				const body = yield* Schema.encodeUnknown(Schemas.TaskUpdateRequest)({
+					data: task,
+				})
 				return yield* HttpClientRequest.patch(`/v2/tasks/${taskId}`).pipe(
 					HttpClientRequest.bodyJson(body),
 					Effect.flatMap(http.execute),
 					Effect.flatMap(
-						HttpClientResponse.schemaBodyJson(Schemas.TaskResponseTransform),
+						HttpClientResponse.schemaBodyJson(Schemas.TaskResponse),
 					),
+					Effect.map((result) => result.data),
 				)
 			}),
 		}

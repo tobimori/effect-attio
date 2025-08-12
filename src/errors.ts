@@ -14,7 +14,7 @@ export class ValidationError extends Schema.TaggedError<ValidationError>()(
 		errors: Schema.Array(
 			Schema.Struct({
 				code: Schema.String,
-				path: Schema.Array(Schema.String),
+				path: Schema.Array(Schema.Union(Schema.String, Schema.Number)),
 				message: Schema.String,
 			}),
 		),
@@ -53,7 +53,7 @@ export const ValidationErrorSchema = Schema.transform(
 		validation_errors: Schema.Array(
 			Schema.Struct({
 				code: Schema.String,
-				path: Schema.Array(Schema.String),
+				path: Schema.Array(Schema.Union(Schema.String, Schema.Number)),
 				message: Schema.String,
 				string_validation: Schema.optional(Schema.String),
 			}),

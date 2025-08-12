@@ -29,3 +29,17 @@ export const LinkedRecordOutput = Schema.Struct({
 	target_object_id: Schema.String,
 	target_record_id: Schema.UUID,
 })
+
+// tags for notes and comments
+export const WorkspaceMemberTag = Schema.Struct({
+	type: Schema.Literal("workspace-member"),
+	workspace_member_id: Schema.UUID,
+})
+
+export const RecordTag = Schema.Struct({
+	type: Schema.Literal("record"),
+	object: Schema.String,
+	record_id: Schema.UUID,
+})
+
+export const Tag = Schema.Union(WorkspaceMemberTag, RecordTag)

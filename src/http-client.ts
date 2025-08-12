@@ -30,7 +30,6 @@ export class AttioHttpClient extends Effect.Service<AttioHttpClient>()(
 					(response) => response.status >= 200 && response.status < 300,
 					(response) =>
 						response.json.pipe(
-							Effect.tap(Effect.logDebug),
 							Effect.flatMap(Schema.decodeUnknown(AttioErrorSchema)),
 							Effect.flatMap(Effect.fail),
 						),

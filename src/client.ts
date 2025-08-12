@@ -1,6 +1,9 @@
 import { Config, Context, Effect, Layer, Schema } from "effect"
 import { AttioHttpClient, type AttioHttpClientOptions } from "./http-client.js"
+import { AttioMeta } from "./services/meta/index.js"
+import { AttioNotes } from "./services/notes/index.js"
 import { AttioTasks } from "./services/tasks/index.js"
+import { AttioWebhooks } from "./services/webhooks/index.js"
 
 const genericTag =
 	<Self, Shape>() =>
@@ -43,6 +46,9 @@ export const AttioClient =
 				}
 			} & {
 				tasks: AttioTasks
+				notes: AttioNotes
+				meta: AttioMeta
+				webhooks: AttioWebhooks
 			}
 		>()(tag)((tag) => ({
 			get Default() {
@@ -51,8 +57,11 @@ export const AttioClient =
 						tag,
 						Effect.gen(function* () {
 							const tasks = yield* AttioTasks
+							const notes = yield* AttioNotes
+							const meta = yield* AttioMeta
+							const webhooks = yield* AttioWebhooks
 
-							return new Proxy({ tasks } as any, {
+							return new Proxy({ tasks, notes, meta, webhooks } as any, {
 								get(target, resource: string) {
 									// Check if it's a specialized service
 									if (resource in target) {
@@ -99,14 +108,14 @@ export const AttioClient =
 										}),
 
 										delete: Effect.fn(`${resource}.delete`)(function* (
-											id: string,
+											_id: string,
 										) {
 											// TODO: implement actual HTTP request
 											return yield* Effect.void
 										}),
 
 										list: Effect.fn(`${resource}.list`)(function* (
-											params?: ListParams,
+											_params?: ListParams,
 										) {
 											// TODO: implement actual HTTP request
 											return yield* Effect.void
@@ -116,7 +125,7 @@ export const AttioClient =
 							})
 						}),
 					).pipe(
-						Layer.provide(Layer.mergeAll(AttioTasks.Default)),
+						Layer.provide(Layer.mergeAll(AttioTasks.Default, AttioNotes.Default, AttioMeta.Default, AttioWebhooks.Default)),
 						Layer.provide(Layer.mergeAll(AttioHttpClient.Default(opts))),
 					)
 			},

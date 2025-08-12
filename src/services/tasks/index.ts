@@ -37,7 +37,7 @@ export class AttioTasks extends Effect.Service<AttioTasks>()("AttioTasks", {
 			 * Required scopes: `task:read-write`, `object_configuration:read`, `record_permission:read`, `user_management:read`
 			 */
 			create: Effect.fn("tasks.create")(function* (task: Types.TaskInput) {
-				const body = yield* Schema.encodeUnknown(Schemas.TaskInputRequest)({
+				const body = yield* Schema.decode(Schemas.TaskInputRequest)({
 					data: task,
 				})
 				return yield* HttpClientRequest.post("/v2/tasks").pipe(
@@ -85,7 +85,7 @@ export class AttioTasks extends Effect.Service<AttioTasks>()("AttioTasks", {
 				taskId: string,
 				task: Types.TaskUpdate,
 			) {
-				const body = yield* Schema.encodeUnknown(Schemas.TaskUpdateRequest)({
+				const body = yield* Schema.decode(Schemas.TaskUpdateRequest)({
 					data: task,
 				})
 				return yield* HttpClientRequest.patch(`/v2/tasks/${taskId}`).pipe(

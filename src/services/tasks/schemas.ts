@@ -5,6 +5,7 @@ import {
 	LinkedRecordInput,
 	LinkedRecordOutput,
 } from "../../shared/schemas.js"
+import { DateTimeISOString } from "../../shared/datetime-input.js"
 
 // public task id schema
 export const TaskId = Schema.Struct({
@@ -37,7 +38,7 @@ export const TaskListResponse = Schema.Struct({
 export const TaskInput = Schema.Struct({
 	content: Schema.String,
 	format: Schema.Literal("plaintext"),
-	deadline_at: Schema.optional(Schema.DateTimeUtc),
+	deadline_at: Schema.optional(DateTimeISOString),
 	is_completed: Schema.Boolean,
 	linked_records: Schema.Array(LinkedRecordInput),
 	assignees: Schema.Array(Assignee),
@@ -48,7 +49,7 @@ export const TaskInputRequest = Schema.Struct({
 })
 
 export const TaskUpdate = Schema.Struct({
-	deadline_at: Schema.optional(Schema.DateTimeUtc),
+	deadline_at: Schema.optional(DateTimeISOString),
 	is_completed: Schema.optional(Schema.Boolean),
 	linked_records: Schema.optional(Schema.Array(LinkedRecordInput)),
 	assignees: Schema.optional(Schema.Array(Assignee)),

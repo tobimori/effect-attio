@@ -1,6 +1,6 @@
 import { Config, Context, Effect, Layer, Schema } from "effect"
-import type { AttioErrors } from "./errors.js"
 import { AttioHttpClient, type AttioHttpClientOptions } from "./http-client.js"
+import { AttioTasks } from "./services/tasks/index.js"
 
 const genericTag =
 	<Self, Shape>() =>
@@ -30,25 +30,19 @@ export const AttioClient =
 				[K in keyof S]: {
 					create: (
 						data: Schema.Schema.Type<S[K]>,
-					) => Effect.Effect<
-						{ id: string } & Schema.Schema.Type<S[K]>,
-						AttioErrors
-					>
-					get: (
-						id: string,
-					) => Effect.Effect<Schema.Schema.Type<S[K]>, AttioErrors>
+					) => Effect.Effect<{ id: string } & Schema.Schema.Type<S[K]>, never>
+					get: (id: string) => Effect.Effect<Schema.Schema.Type<S[K]>, never>
 					update: (
 						id: string,
 						data: Partial<Schema.Schema.Type<S[K]>>,
-					) => Effect.Effect<Schema.Schema.Type<S[K]>, AttioErrors>
-					delete: (id: string) => Effect.Effect<void, AttioErrors>
+					) => Effect.Effect<Schema.Schema.Type<S[K]>, never>
+					delete: (id: string) => Effect.Effect<void, never>
 					list: (
 						params?: ListParams,
-					) => Effect.Effect<
-						{ data: Array<Schema.Schema.Type<S[K]>> },
-						AttioErrors
-					>
+					) => Effect.Effect<{ data: Array<Schema.Schema.Type<S[K]>> }, never>
 				}
+			} & {
+				tasks: AttioTasks
 			}
 		>()(tag)((tag) => ({
 			get Default() {
@@ -56,10 +50,15 @@ export const AttioClient =
 					Layer.effect(
 						tag,
 						Effect.gen(function* () {
-							const http = yield* AttioHttpClient
+							const tasks = yield* AttioTasks
 
-							return new Proxy({} as any, {
-								get(_, resource: string) {
+							return new Proxy({ tasks } as any, {
+								get(target, resource: string) {
+									// Check if it's a specialized service
+									if (resource in target) {
+										return target[resource]
+									}
+
 									const schema = schemas[resource]
 									if (!schema) {
 										throw new Error(`Unknown resource: ${resource}`)
@@ -78,15 +77,15 @@ export const AttioClient =
 											// For now, return empty object that will be validated
 											const mockData = { id }
 											return yield* Schema.decode(schema)(mockData).pipe(
-												Effect.orElse(() => 
+												Effect.orElse(() =>
 													// Return a valid mock based on the resource type
-													Effect.succeed({ 
-														id, 
+													Effect.succeed({
+														id,
 														name: "Mock Name",
 														email: "mock@example.com",
-														domain: "mock.com"
-													} as any)
-												)
+														domain: "mock.com",
+													} as any),
+												),
 											)
 										}),
 
@@ -116,7 +115,10 @@ export const AttioClient =
 								},
 							})
 						}),
-					).pipe(Layer.provide(AttioHttpClient.Default(opts)))
+					).pipe(
+						Layer.provide(Layer.mergeAll(AttioTasks.Default)),
+						Layer.provide(Layer.mergeAll(AttioHttpClient.Default(opts))),
+					)
 			},
 			get layerConfig() {
 				return Layer.unwrapEffect(

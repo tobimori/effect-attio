@@ -4,6 +4,8 @@ import * as Config from "effect/Config"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import type * as Redacted from "effect/Redacted"
+import * as Schema from "effect/Schema"
+import { AttioErrorSchema } from "./errors.js"
 
 export interface AttioHttpClientOptions {
 	apiKey: Redacted.Redacted<string>
@@ -17,11 +19,21 @@ export class AttioHttpClient extends Effect.Service<AttioHttpClient>()(
 			return (yield* HttpClient.HttpClient).pipe(
 				HttpClient.mapRequest((req) =>
 					req.pipe(
+						HttpClientRequest.acceptJson,
 						HttpClientRequest.prependUrl(
 							opts.baseUrl ?? "https://api.attio.com",
 						),
 						HttpClientRequest.bearerToken(opts.apiKey),
 					),
+				),
+				HttpClient.filterOrElse(
+					(response) => response.status >= 200 && response.status < 300,
+					(response) =>
+						response.json.pipe(
+							Effect.tap(Effect.logDebug),
+							Effect.flatMap(Schema.decodeUnknown(AttioErrorSchema)),
+							Effect.flatMap(Effect.fail),
+						),
 				),
 			)
 		}),

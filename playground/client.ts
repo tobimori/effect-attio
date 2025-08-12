@@ -1,5 +1,5 @@
 import { FetchHttpClient } from "@effect/platform"
-import { Effect, Layer, Schema } from "effect"
+import { DateTime, Effect, Layer, Redacted, Schema } from "effect"
 import { AttioClient } from "../src/client.js"
 
 const PersonSchema = Schema.Struct({
@@ -22,6 +22,32 @@ class MyAttioClient extends AttioClient<MyAttioClient>()("MyAttioClient", {
 // Example program
 const program = Effect.gen(function* () {
 	const attio = yield* MyAttioClient
+
+	// Create a new task
+	const newTask = yield* attio.tasks.create({
+		content: "Test task from Effect client",
+		format: "plaintext",
+		deadlineAt: (yield* DateTime.now).pipe(DateTime.addDuration("7 days")),
+		isCompleted: false,
+		linkedRecords: [],
+		assignees: [],
+	})
+	console.log("Created task:", newTask)
+
+	// Get the task we just created
+	const fetchedTask = yield* attio.tasks.get(newTask.id.taskId)
+	console.log("Fetched task:", fetchedTask)
+
+	// Update the task - mark it as completed and change deadline
+	const updatedTask = yield* attio.tasks.update(newTask.id.taskId, {
+		isCompleted: true,
+		deadlineAt: (yield* DateTime.now).pipe(DateTime.addDuration("14 days")),
+	})
+	console.log("Updated task:", updatedTask)
+
+	// Delete the task we just created
+	yield* attio.tasks.delete(newTask.id.taskId)
+	console.log(`Deleted task ${newTask.id.taskId}`)
 
 	// Create a person
 	const person = yield* attio.people.create({
@@ -53,9 +79,10 @@ const program = Effect.gen(function* () {
 Effect.runPromise(
 	program.pipe(
 		Effect.provide(
-			MyAttioClient.layerConfig.pipe(Layer.provide(FetchHttpClient.layer)),
+			MyAttioClient.Default({
+				apiKey: Redacted.make(process.env.ATTIO_API_KEY),
+			}).pipe(Layer.provide(FetchHttpClient.layer)),
 		),
-		Effect.catchAll((error) => Effect.die(error)), // Handle errors
 	),
 )
 	.then(console.log)

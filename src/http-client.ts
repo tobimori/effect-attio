@@ -1,11 +1,18 @@
 import * as HttpClient from "@effect/platform/HttpClient"
+import * as HttpClientError from "@effect/platform/HttpClientError"
 import * as HttpClientRequest from "@effect/platform/HttpClientRequest"
 import * as Config from "effect/Config"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
+import * as Option from "effect/Option"
 import type * as Redacted from "effect/Redacted"
 import * as Schema from "effect/Schema"
-import { AttioErrorSchema } from "./errors.js"
+import { RateLimitErrorSchema, UnauthorizedErrorSchema } from "./errors.js"
+
+const GlobalErrorSchema = Schema.Union(
+	UnauthorizedErrorSchema,
+	RateLimitErrorSchema,
+)
 
 export interface AttioHttpClientOptions {
 	apiKey: Redacted.Redacted<string>
@@ -29,10 +36,22 @@ export class AttioHttpClient extends Effect.Service<AttioHttpClient>()(
 				HttpClient.filterOrElse(
 					(response) => response.status >= 200 && response.status < 300,
 					(response) =>
-						response.json.pipe(
-							Effect.flatMap(Schema.decodeUnknown(AttioErrorSchema)),
-							Effect.flatMap(Effect.fail),
-						),
+						Effect.gen(function* () {
+							const json = yield* response.json
+							const globalError =
+								Schema.decodeUnknownOption(GlobalErrorSchema)(json)
+
+							if (Option.isSome(globalError)) {
+								return yield* globalError.value
+							}
+
+							return yield* new HttpClientError.ResponseError({
+								response,
+								request: response.request,
+								reason: "StatusCode",
+								description: "unhandled non 2xx status code",
+							})
+						}),
 				),
 			)
 		}),

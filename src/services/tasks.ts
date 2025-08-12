@@ -85,12 +85,10 @@ export class AttioTasks extends Effect.Service<AttioTasks>()("AttioTasks", {
 			create: Effect.fn("tasks.create")(function* (
 				task: Schema.Schema.Encoded<typeof TaskInput>,
 			) {
-				const body = yield* Schema.encodeUnknown(DataStruct(TaskInput))({
-					data: task,
-				})
+				const data = yield* Schema.encodeUnknown(TaskInput)(task)
 
 				return yield* HttpClientRequest.post("/v2/tasks").pipe(
-					HttpClientRequest.bodyJson(body),
+					HttpClientRequest.bodyJson({ data }),
 					Effect.flatMap(http.execute),
 					Effect.flatMap(HttpClientResponse.schemaBodyJson(DataStruct(Task))),
 					Effect.map((result) => result.data),

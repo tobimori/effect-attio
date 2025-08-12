@@ -62,11 +62,9 @@ export class AttioNotes extends Effect.Service<AttioNotes>()("AttioNotes", {
 			 * Required scopes: `note:read-write`, `object_configuration:read`, `record_permission:read`
 			 */
 			create: Effect.fn("notes.create")(function* (note: Schema.Schema.Encoded<typeof NoteInput>) {
-				const body = yield* Schema.encode(DataStruct(NoteInput))({
-					data: note,
-				})
+				const data = yield* Schema.encodeUnknown(NoteInput)(note)
 				return yield* HttpClientRequest.post("/v2/notes").pipe(
-					HttpClientRequest.bodyJson(body),
+					HttpClientRequest.bodyJson({ data }),
 					Effect.flatMap(http.execute),
 					Effect.flatMap(
 						HttpClientResponse.schemaBodyJson(DataStruct(Note)),

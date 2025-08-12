@@ -8,6 +8,10 @@ export const RecordId = Schema.Struct({
 	record_id: Schema.UUID,
 })
 
+export const WorkspaceMemberId = Schema.Struct({
+	workspace_member_id: Schema.UUID,
+})
+
 export const ObjectId = Schema.Struct({
 	object_id: Schema.UUID,
 })

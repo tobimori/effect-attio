@@ -55,11 +55,9 @@ export class AttioComments extends Effect.Service<AttioComments>()(
 				create: Effect.fn("comments.create")(function* (
 					comment: Schema.Schema.Encoded<typeof CommentInput>,
 				) {
-					const body = yield* Schema.encode(DataStruct(CommentInput))({
-						data: comment,
-					})
+					const data = yield* Schema.encodeUnknown(CommentInput)(comment)
 					return yield* HttpClientRequest.post("/v2/comments").pipe(
-						HttpClientRequest.bodyJson(body),
+						HttpClientRequest.bodyJson({ data }),
 						Effect.flatMap(http.execute),
 						Effect.flatMap(HttpClientResponse.schemaBodyJson(DataStruct(Comment))),
 						Effect.map((result) => result.data),

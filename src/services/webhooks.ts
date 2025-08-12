@@ -85,11 +85,9 @@ export class AttioWebhooks extends Effect.Service<AttioWebhooks>()(
 				create: Effect.fn("webhooks.create")(function* (
 					webhook: Schema.Schema.Encoded<typeof WebhookInput>,
 				) {
-					const body = yield* Schema.encodeUnknown(DataStruct(WebhookInput))({
-						data: webhook,
-					})
+					const data = yield* Schema.encodeUnknown(WebhookInput)(webhook)
 					return yield* HttpClientRequest.post("/v2/webhooks").pipe(
-						HttpClientRequest.bodyJson(body),
+						HttpClientRequest.bodyJson({ data }),
 						Effect.flatMap(http.execute),
 						Effect.flatMap(
 							HttpClientResponse.schemaBodyJson(DataStruct(WebhookWithSecret)),

@@ -9,6 +9,7 @@
 		"rules": {
 			"suspicious": {
 				"noExplicitAny": "off",
+				"noShadowRestrictedNames": "off",
 			},
 		},
 	},

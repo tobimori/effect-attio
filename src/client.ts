@@ -4,6 +4,7 @@ import { AttioComments } from "./services/comments.js"
 import { AttioMeta } from "./services/meta.js"
 import { AttioNotes } from "./services/notes.js"
 import { AttioObjects } from "./services/objects.js"
+import { AttioRecords } from "./services/records.js"
 import { AttioTasks } from "./services/tasks.js"
 import { AttioThreads } from "./services/threads.js"
 import { AttioWebhooks } from "./services/webhooks.js"
@@ -69,75 +70,85 @@ export const AttioClient =
 							const tasks = yield* AttioTasks
 							const notes = yield* AttioNotes
 							const objects = yield* AttioObjects
+							const records = yield* AttioRecords
 							const meta = yield* AttioMeta
 							const webhooks = yield* AttioWebhooks
 							const workspaceMembers = yield* AttioWorkspaceMembers
 
-							return new Proxy({ comments, threads, tasks, notes, objects, meta, webhooks, workspaceMembers } as any, {
-								get(target, resource: string) {
-									// Check if it's a specialized service
-									if (resource in target) {
-										return target[resource]
-									}
+							return new Proxy(
+								{
+									comments,
+									threads,
+									tasks,
+									notes,
+									objects,
+									meta,
+									webhooks,
+									workspaceMembers,
+								} as any,
+								{
+									get(target, resource: string) {
+										// Check if it's a specialized service
+										if (resource in target) {
+											return target[resource]
+										}
 
-									const schema = schemas[resource]
-									if (!schema) {
-										throw new Error(`Unknown resource: ${resource}`)
-									}
+										const schema = schemas[resource]
+										if (!schema) {
+											throw new Error(`Unknown resource: ${resource}`)
+										}
 
-									return {
-										create: Effect.fn(`${resource}.create`)(function* (data) {
-											const validated = yield* Schema.decode(schema)(data)
-											// TODO: implement actual HTTP request
-											// for now, return mock data
-											return { id: "123", ...validated }
-										}),
+										return {
+											create: Effect.fn(`${resource}.create`)(function* (data) {
+												const validated = yield* Schema.decode(schema)(data)
+												// TODO: implement actual HTTP request
+												// for now, return mock data
+												return { id: "123", ...validated }
+											}),
 
-										get: Effect.fn(`${resource}.get`)(function* (id: string) {
-											// TODO: implement actual HTTP request
-											// For now, return empty object that will be validated
-											const mockData = { id }
-											return yield* Schema.decode(schema)(mockData).pipe(
-												Effect.orElse(() =>
-													// Return a valid mock based on the resource type
-													Effect.succeed({
-														id,
-														name: "Mock Name",
-														email: "mock@example.com",
-														domain: "mock.com",
-													} as any),
-												),
-											)
-										}),
+											get: (id: string) => records.get(resource, id, schema),
 
-										update: Effect.fn(`${resource}.update`)(function* (
-											id: string,
-											data,
-										) {
-											const validated = yield* Schema.decode(schema)(data)
-											// TODO: implement actual HTTP request
-											return { id, ...validated }
-										}),
+											update: Effect.fn(`${resource}.update`)(function* (
+												id: string,
+												data,
+											) {
+												const validated = yield* Schema.decode(schema)(data)
+												// TODO: implement actual HTTP request
+												return { id, ...validated }
+											}),
 
-										delete: Effect.fn(`${resource}.delete`)(function* (
-											_id: string,
-										) {
-											// TODO: implement actual HTTP request
-											return yield* Effect.void
-										}),
+											delete: Effect.fn(`${resource}.delete`)(function* (
+												_id: string,
+											) {
+												// TODO: implement actual HTTP request
+												return yield* Effect.void
+											}),
 
-										list: Effect.fn(`${resource}.list`)(function* (
-											_params?: ListParams,
-										) {
-											// TODO: implement actual HTTP request
-											return yield* Effect.void
-										}),
-									}
+											list: Effect.fn(`${resource}.list`)(function* (
+												_params?: ListParams,
+											) {
+												// TODO: implement actual HTTP request
+												return yield* Effect.void
+											}),
+										}
+									},
 								},
-							})
+							)
 						}),
 					).pipe(
-						Layer.provide(Layer.mergeAll(AttioComments.Default, AttioThreads.Default, AttioTasks.Default, AttioNotes.Default, AttioObjects.Default, AttioMeta.Default, AttioWebhooks.Default, AttioWorkspaceMembers.Default)),
+						Layer.provide(
+							Layer.mergeAll(
+								AttioComments.Default,
+								AttioThreads.Default,
+								AttioTasks.Default,
+								AttioNotes.Default,
+								AttioObjects.Default,
+								AttioRecords.Default,
+								AttioMeta.Default,
+								AttioWebhooks.Default,
+								AttioWorkspaceMembers.Default,
+							),
+						),
 						Layer.provide(Layer.mergeAll(AttioHttpClient.Default(opts))),
 					)
 			},

@@ -23,10 +23,16 @@ export const ActorType = Schema.Literal(
 	"app",
 )
 
-export const Actor = Schema.Struct({
-	type: ActorType,
-	id: Schema.UUID,
-})
+export const Actor = Schema.Union(
+	Schema.Struct({
+		type: Schema.Literal("system"),
+		id: Schema.Null,
+	}),
+	Schema.Struct({
+		type: Schema.Literal("api-token", "workspace-member", "app"),
+		id: Schema.UUID,
+	}),
+)
 
 // assignee references for tasks and other objects
 export const Assignee = Schema.Struct({

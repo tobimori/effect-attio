@@ -47,7 +47,7 @@ export interface AttioRecord<T> {
 		record_id: string
 	}
 	created_at: string
-	web_url?: string
+	web_url: string
 	values: T
 }
 

@@ -1,1 +1,16 @@
+export { AttioClient } from "./client.js"
+export type { AttioHttpClientOptions } from "./http-client.js"
 export { AttioHttpClient } from "./http-client.js"
+
+export type { AttributeDef } from "./schemas/attributes.js"
+export * as Fields from "./schemas/attributes.js"
+
+export { AttioComments } from "./services/comments.js"
+export { AttioMeta } from "./services/meta.js"
+export { AttioNotes } from "./services/notes.js"
+export { AttioObjects } from "./services/objects.js"
+export { AttioRecords } from "./services/records.js"
+export { AttioTasks } from "./services/tasks.js"
+export { AttioThreads } from "./services/threads.js"
+export { AttioWebhooks } from "./services/webhooks.js"
+export { AttioWorkspaceMembers } from "./services/workspace-members.js"

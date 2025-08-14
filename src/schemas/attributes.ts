@@ -964,8 +964,28 @@ export const Status = {
 	),
 } satisfies AttributeDef
 
+/**
+ * # Text
+ *
+ * **Human-readable, unconstrained text inputs**
+ *
+ * Text attributes are the most common attribute type. They represent unstructured or human-readable data, with a maximum size of 10mb.
+ *
+ * Examples include `description`, social media handles, and workspace/user IDs. Note that on company objects, `name` is a text attribute, while on person objects, `name` is a separate (Personal) name attribute type.
+ *
+ * Text attributes are always single-select.
+ *
+ * @see https://docs.attio.com/docs/attribute-types/attribute-types-text
+ */
 export const Text = {
-	input: Schema.String,
+	input: Schema.Union(
+		Schema.String,
+		Schema.Array(
+			Schema.Struct({
+				value: Schema.String,
+			}),
+		).pipe(Schema.maxItems(1)),
+	),
 	output: ApiSingleValue(
 		Schema.Struct({
 			...BaseAttribute.fields,
@@ -975,13 +995,33 @@ export const Text = {
 	),
 } satisfies AttributeDef
 
+/**
+ * # Timestamp
+ *
+ * **A calendar date including time information, stored in UTC**
+ *
+ * Timestamp attributes represent a single, universal moment in time. They use the ISO 8601 format and are stored with nanosecond precision.
+ *
+ * Every Attio object has a `created_at` timestamp attribute. Users can also create custom timestamp attributes.
+ *
+ * Timestamp attributes are always single-select and always returned in UTC timezone.
+ *
+ * @see https://docs.attio.com/docs/attribute-types/attribute-types-timestamp
+ */
 export const Timestamp = {
-	input: Schema.Union(Schema.String, Schema.Date),
+	input: Schema.Union(
+		DateTimeISOString,
+		Schema.Array(
+			Schema.Struct({
+				value: DateTimeISOString,
+			}),
+		).pipe(Schema.maxItems(1)),
+	),
 	output: ApiSingleValue(
 		Schema.Struct({
 			...BaseAttribute.fields,
 			attribute_type: Schema.Literal("timestamp"),
-			value: Schema.String,
+			value: Schema.DateTimeUtc,
 		}),
 	),
 } satisfies AttributeDef

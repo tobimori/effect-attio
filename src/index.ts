@@ -3,7 +3,7 @@ export type { AttioHttpClientOptions } from "./http-client.js"
 export { AttioHttpClient } from "./http-client.js"
 
 export type { AttributeDef } from "./schemas/attribute-builder.js"
-export * as Fields from "./schemas/attributes.js"
+export * as Attributes from "./schemas/attributes.js"
 
 export { AttioComments } from "./services/comments.js"
 export { AttioMeta } from "./services/meta.js"

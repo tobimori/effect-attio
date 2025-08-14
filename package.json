@@ -33,7 +33,7 @@
 		"build": "pnpm clean && tsc -b tsconfig.build.json && cp -r src dist/src && cp package.json README.md LICENSE dist/",
 		"check": "tsc -b tsconfig.json",
 		"clean": "rm -rf dist .tsbuildinfo",
-		"release": "pnpm build && npm publish dist"
+		"release": "pnpm build && pnpm publish"
 	},
 	"peerDependencies": {
 		"@effect/platform": "^0.90.2",

@@ -418,12 +418,25 @@ export const Number = {
 	),
 } satisfies AttributeDef
 
+/**
+ * # Phone number
+ *
+ * **International telephone numbers**
+ *
+ * Phone number attributes represent an international telephone number. We follow the E164 format, which means all phone numbers are prefixed with a country code.
+ *
+ * The only default phone number attribute is the multi-select `phone_numbers` attribute on the person object, although you can create phone number attributes on other objects or lists.
+ *
+ * This is the single-select variant of the phone number attribute.
+ *
+ * @see https://docs.attio.com/docs/attribute-types/attribute-types-phone-number
+ */
 export const PhoneNumber: AttributeDef = {
 	input: Schema.Union(
 		Schema.String,
 		Schema.Struct({
 			original_phone_number: Schema.String,
-			country_code: Schema.optional(Schema.NullOr(Schema.String)),
+			country_code: Schema.NullOr(CountryCode),
 		}),
 	),
 	output: ApiSingleValue(
@@ -431,12 +444,25 @@ export const PhoneNumber: AttributeDef = {
 			...BaseAttribute.fields,
 			attribute_type: Schema.Literal("phone-number"),
 			original_phone_number: Schema.String,
-			country_code: Schema.String,
-			phone_number: Schema.String,
+			normalized_phone_number: Schema.String,
+			country_code: CountryCode,
 		}),
 	),
 }
 
+/**
+ * # Phone numbers
+ *
+ * **International telephone numbers**
+ *
+ * Phone number attributes represent an international telephone number. We follow the E164 format, which means all phone numbers are prefixed with a country code.
+ *
+ * The only default phone number attribute is the multi-select `phone_numbers` attribute on the person object, although you can create phone number attributes on other objects or lists.
+ *
+ * This is the multi-select variant of the phone number attribute.
+ *
+ * @see https://docs.attio.com/docs/attribute-types/attribute-types-phone-number
+ */
 export const PhoneNumbers: AttributeDef = {
 	input: Schema.Union(
 		Schema.String,
@@ -444,7 +470,7 @@ export const PhoneNumbers: AttributeDef = {
 		Schema.Array(
 			Schema.Struct({
 				original_phone_number: Schema.String,
-				country_code: Schema.optional(Schema.NullOr(Schema.String)),
+				country_code: Schema.NullOr(CountryCode),
 			}),
 		),
 	),
@@ -453,14 +479,40 @@ export const PhoneNumbers: AttributeDef = {
 			...BaseAttribute.fields,
 			attribute_type: Schema.Literal("phone-number"),
 			original_phone_number: Schema.String,
-			country_code: Schema.String,
-			phone_number: Schema.String,
+			normalized_phone_number: Schema.String,
+			country_code: CountryCode,
 		}),
 	),
 }
 
+/**
+ * # Rating
+ *
+ * **Star ratings from 0 to 5**
+ *
+ * Rating attributes are numeric values from 0 to 5, displayed in the UI as a proportion of 5 stars.
+ *
+ * There are no default rating attributes in Attio. You can create rating attributes through the UI or API.
+ *
+ * Only single-select rating attributes are permitted.
+ *
+ * @see https://docs.attio.com/docs/attribute-types/attribute-types-rating
+ */
 export const Rating: AttributeDef = {
-	input: Schema.Number,
+	input: Schema.Union(
+		Schema.Number.pipe(
+			Schema.greaterThanOrEqualTo(0),
+			Schema.lessThanOrEqualTo(5),
+		),
+		Schema.Array(
+			Schema.Struct({
+				value: Schema.Number.pipe(
+					Schema.greaterThanOrEqualTo(0),
+					Schema.lessThanOrEqualTo(5),
+				),
+			}),
+		).pipe(Schema.maxItems(1)),
+	),
 	output: ApiSingleValue(
 		Schema.Struct({
 			...BaseAttribute.fields,

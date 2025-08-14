@@ -1,4 +1,3 @@
-import * as HttpClientRequest from "@effect/platform/HttpClientRequest"
 import * as HttpClientResponse from "@effect/platform/HttpClientResponse"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
@@ -36,12 +35,13 @@ export class AttioMeta extends Effect.Service<AttioMeta>()("AttioMeta", {
 			 * Identify the current access token, the workspace it is linked to, and any permissions it has.
 			 */
 			identify: Effect.fn("meta.identify")(function* () {
-				return yield* HttpClientRequest.get("/v2/self").pipe(
-					http.execute,
-					Effect.flatMap(
-						HttpClientResponse.schemaBodyJson(TokenInfoResponse),
-					),
-				)
+				return yield* http
+					.get("/v2/self")
+					.pipe(
+						Effect.flatMap(
+							HttpClientResponse.schemaBodyJson(TokenInfoResponse),
+						),
+					)
 			}),
 		}
 	}),

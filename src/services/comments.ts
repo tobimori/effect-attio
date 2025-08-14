@@ -18,6 +18,7 @@ export const RecordReference = Schema.Struct({
 	...RecordId.fields,
 	...ObjectId.fields,
 })
+
 export const Comment = Schema.Struct({
 	id: CommentId,
 	thread_id: Schema.UUID,
@@ -59,7 +60,9 @@ export class AttioComments extends Effect.Service<AttioComments>()(
 					return yield* HttpClientRequest.post("/v2/comments").pipe(
 						HttpClientRequest.bodyJson({ data }),
 						Effect.flatMap(http.execute),
-						Effect.flatMap(HttpClientResponse.schemaBodyJson(DataStruct(Comment))),
+						Effect.flatMap(
+							HttpClientResponse.schemaBodyJson(DataStruct(Comment)),
+						),
 						Effect.map((result) => result.data),
 					)
 				}),
@@ -73,7 +76,9 @@ export class AttioComments extends Effect.Service<AttioComments>()(
 				 */
 				get: Effect.fn("comments.get")(function* (commentId: string) {
 					return yield* http.get(`/v2/comments/${commentId}`).pipe(
-						Effect.flatMap(HttpClientResponse.schemaBodyJson(DataStruct(Comment))),
+						Effect.flatMap(
+							HttpClientResponse.schemaBodyJson(DataStruct(Comment)),
+						),
 						Effect.map((result) => result.data),
 					)
 				}),

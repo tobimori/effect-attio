@@ -45,7 +45,9 @@ export class AttioNotes extends Effect.Service<AttioNotes>()("AttioNotes", {
 			 *
 			 * Required scopes: `note:read`, `object_configuration:read`, `record_permission:read`
 			 */
-			list: Effect.fn("notes.list")(function* (params?: Schema.Schema.Type<typeof NoteListParams>) {
+			list: Effect.fn("notes.list")(function* (
+				params?: Schema.Schema.Type<typeof NoteListParams>,
+			) {
 				return yield* HttpClientRequest.get("/v2/notes").pipe(
 					HttpClientRequest.appendUrlParams(params),
 					http.execute,
@@ -61,14 +63,14 @@ export class AttioNotes extends Effect.Service<AttioNotes>()("AttioNotes", {
 			 *
 			 * Required scopes: `note:read-write`, `object_configuration:read`, `record_permission:read`
 			 */
-			create: Effect.fn("notes.create")(function* (note: Schema.Schema.Encoded<typeof NoteInput>) {
+			create: Effect.fn("notes.create")(function* (
+				note: Schema.Schema.Encoded<typeof NoteInput>,
+			) {
 				const data = yield* Schema.encodeUnknown(NoteInput)(note)
 				return yield* HttpClientRequest.post("/v2/notes").pipe(
 					HttpClientRequest.bodyJson({ data }),
 					Effect.flatMap(http.execute),
-					Effect.flatMap(
-						HttpClientResponse.schemaBodyJson(DataStruct(Note)),
-					),
+					Effect.flatMap(HttpClientResponse.schemaBodyJson(DataStruct(Note))),
 					Effect.map((result) => result.data),
 				)
 			}),
@@ -80,9 +82,7 @@ export class AttioNotes extends Effect.Service<AttioNotes>()("AttioNotes", {
 			 */
 			get: Effect.fn("notes.get")(function* (noteId: string) {
 				return yield* http.get(`/v2/notes/${noteId}`).pipe(
-					Effect.flatMap(
-						HttpClientResponse.schemaBodyJson(DataStruct(Note)),
-					),
+					Effect.flatMap(HttpClientResponse.schemaBodyJson(DataStruct(Note))),
 					Effect.map((result) => result.data),
 				)
 			}),

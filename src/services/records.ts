@@ -1,3 +1,4 @@
+import * as HttpClientRequest from "@effect/platform/HttpClientRequest"
 import * as HttpClientResponse from "@effect/platform/HttpClientResponse"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
@@ -9,15 +10,6 @@ const RecordId = Schema.Struct({
 	object_id: Schema.UUID,
 	record_id: Schema.UUID,
 })
-
-export const createRecordSchema = <T extends Schema.Schema.Any>(
-	valuesSchema: T,
-) =>
-	Schema.Struct({
-		id: RecordId,
-		created_at: Schema.DateTimeUtc,
-		values: valuesSchema,
-	})
 
 export class AttioRecords extends Effect.Service<AttioRecords>()(
 	"AttioRecords",
@@ -31,21 +23,62 @@ export class AttioRecords extends Effect.Service<AttioRecords>()(
 				 *
 				 * Required scopes: `record_permission:read`, `object_configuration:read`
 				 */
-				get: Effect.fn(`record.get`)(function* <T extends Schema.Schema.Any>(
-					object: string,
-					recordId: string,
-					valuesSchema: T,
-				) {
-					const recordSchema = createRecordSchema(valuesSchema)
-
+				get: Effect.fn(`record.get`)(function* <
+					_I extends Schema.Schema.Any,
+					O extends Schema.Schema.Any,
+				>(object: string, schema: { input: _I; output: O }, recordId: string) {
 					return yield* http
 						.get(`/v2/objects/${object}/records/${recordId}`)
 						.pipe(
 							Effect.flatMap(
-								HttpClientResponse.schemaBodyJson(DataStruct(recordSchema)),
+								HttpClientResponse.schemaBodyJson(
+									DataStruct(
+										Schema.Struct({
+											id: RecordId,
+											created_at: Schema.DateTimeUtc,
+											values: schema.output,
+										}),
+									),
+								),
 							),
 							Effect.map((result) => result.data),
 						)
+				}),
+
+				/**
+				 * Creates a new person, company or other record.
+				 * This endpoint will throw on conflicts of unique attributes.
+				 *
+				 * Required scopes: `record_permission:read-write`, `object_configuration:read`
+				 */
+				create: Effect.fn(`record.create`)(function* <
+					I extends Schema.Schema.Any,
+					O extends Schema.Schema.Any,
+				>(
+					object: string,
+					schema: { input: I; output: O },
+					data: Schema.Schema.Type<I>,
+				) {
+					return yield* HttpClientRequest.post(
+						`/v2/objects/${object}/records`,
+					).pipe(
+						HttpClientRequest.bodyJson({
+							data: { values: yield* Schema.encode(schema.input)(data) },
+						}),
+						Effect.flatMap(http.execute),
+						Effect.flatMap(
+							HttpClientResponse.schemaBodyJson(
+								DataStruct(
+									Schema.Struct({
+										id: RecordId,
+										created_at: Schema.DateTimeUtc,
+										values: schema.output,
+									}),
+								),
+							),
+						),
+						Effect.map((result) => result.data),
+					)
 				}),
 			}
 		}),

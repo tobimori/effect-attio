@@ -1,5 +1,12 @@
 import { Config, Context, Effect, Layer, Schema } from "effect"
+import {
+	type MergedObjectFields,
+	type ObjectConfig,
+	type ObjectsConfig,
+	processObjectsConfig,
+} from "./config.js"
 import { AttioHttpClient, type AttioHttpClientOptions } from "./http-client.js"
+import type { createSchemas } from "./schemas/helpers.js"
 import { AttioComments } from "./services/comments.js"
 import { AttioMeta } from "./services/meta.js"
 import { AttioNotes } from "./services/notes.js"
@@ -28,26 +35,68 @@ export interface ListParams {
 
 export const AttioClient =
 	<Self>() =>
-	<L extends string, S extends Record<string, Schema.Schema<any, any>>>(
+	<L extends string, T extends Record<string, ObjectConfig> = {}>(
 		tag: L,
-		schemas: S,
+		config: ObjectsConfig<T> = {},
 	) =>
 		genericTag<
 			Self,
 			{
-				[K in keyof S]: {
+				[K in keyof MergedObjectFields<T>]: {
 					create: (
-						data: Schema.Schema.Type<S[K]>,
-					) => Effect.Effect<{ id: string } & Schema.Schema.Type<S[K]>, never>
-					get: (id: string) => Effect.Effect<Schema.Schema.Type<S[K]>, never>
+						data: Schema.Schema.Type<
+							ReturnType<
+								typeof createSchemas<MergedObjectFields<T>[K]>
+							>["input"]
+						>,
+					) => Effect.Effect<
+						Schema.Schema.Type<
+							ReturnType<
+								typeof createSchemas<MergedObjectFields<T>[K]>
+							>["output"]
+						>,
+						never
+					>
+					get: (
+						id: string,
+					) => Effect.Effect<
+						Schema.Schema.Type<
+							ReturnType<
+								typeof createSchemas<MergedObjectFields<T>[K]>
+							>["output"]
+						>,
+						never
+					>
 					update: (
 						id: string,
-						data: Partial<Schema.Schema.Type<S[K]>>,
-					) => Effect.Effect<Schema.Schema.Type<S[K]>, never>
+						data: Partial<
+							Schema.Schema.Type<
+								ReturnType<
+									typeof createSchemas<MergedObjectFields<T>[K]>
+								>["input"]
+							>
+						>,
+					) => Effect.Effect<
+						Schema.Schema.Type<
+							ReturnType<
+								typeof createSchemas<MergedObjectFields<T>[K]>
+							>["output"]
+						>,
+						never
+					>
 					delete: (id: string) => Effect.Effect<void, never>
-					list: (
-						params?: ListParams,
-					) => Effect.Effect<{ data: Array<Schema.Schema.Type<S[K]>> }, never>
+					list: (params?: ListParams) => Effect.Effect<
+						{
+							data: Array<
+								Schema.Schema.Type<
+									ReturnType<
+										typeof createSchemas<MergedObjectFields<T>[K]>
+									>["output"]
+								>
+							>
+						},
+						never
+					>
 				}
 			} & {
 				comments: AttioComments
@@ -75,6 +124,8 @@ export const AttioClient =
 							const webhooks = yield* AttioWebhooks
 							const workspaceMembers = yield* AttioWorkspaceMembers
 
+							const schemas = processObjectsConfig(config)
+
 							return new Proxy(
 								{
 									comments,
@@ -93,26 +144,26 @@ export const AttioClient =
 											return target[resource]
 										}
 
-										const schema = schemas[resource]
-										if (!schema) {
+										// Check if it's a configured object
+										if (!(resource in schemas)) {
 											throw new Error(`Unknown resource: ${resource}`)
 										}
 
-										return {
-											create: Effect.fn(`${resource}.create`)(function* (data) {
-												const validated = yield* Schema.decode(schema)(data)
-												// TODO: implement actual HTTP request
-												// for now, return mock data
-												return { id: "123", ...validated }
-											}),
+										const schema = schemas[resource as keyof typeof schemas]
 
-											get: (id: string) => records.get(resource, id, schema),
+										return {
+											create: (data: any) =>
+												records.create(resource, schema, data),
+
+											get: (id: string) => records.get(resource, schema, id),
 
 											update: Effect.fn(`${resource}.update`)(function* (
 												id: string,
 												data,
 											) {
-												const validated = yield* Schema.decode(schema)(data)
+												const validated = yield* Schema.decode(schema.input)(
+													data,
+												)
 												// TODO: implement actual HTTP request
 												return { id, ...validated }
 											}),
@@ -128,7 +179,7 @@ export const AttioClient =
 												_params?: ListParams,
 											) {
 												// TODO: implement actual HTTP request
-												return yield* Effect.void
+												return yield* Effect.succeed({ data: [] })
 											}),
 										}
 									},

@@ -11,6 +11,9 @@
 				"noExplicitAny": "off",
 				"noShadowRestrictedNames": "off",
 			},
+			"performance": {
+				"noDynamicNamespaceImportAccess": "off",
+			},
 		},
 	},
 }

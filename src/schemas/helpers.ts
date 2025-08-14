@@ -18,9 +18,11 @@ const baseObjectAttributes = {
 
 type BaseAttributes = typeof baseObjectAttributes
 
-type MergedFields<T extends Record<string, AttributeDef>> = BaseAttributes & T
+type AttributeLike = { input: any; output: any } // TODO: fix
 
-export function createSchemas<T extends Record<string, AttributeDef>>(
+type MergedFields<T extends Record<string, AttributeLike>> = BaseAttributes & T
+
+export function createSchemas<T extends Record<string, AttributeLike>>(
 	fields: T,
 ) {
 	const allFields = { ...baseObjectAttributes, ...fields } as MergedFields<T>
@@ -30,14 +32,22 @@ export function createSchemas<T extends Record<string, AttributeDef>>(
 
 	for (const key in allFields) {
 		if (allFields[key]) {
-			inputFields[key] = allFields[key].input
-			outputFields[key] = allFields[key].output
+			const field = allFields[key]
+			// Only include in input if it's not Void (ReadOnly fields have Void input)
+			// TODO: use never instead of void
+			if (field.input !== Schema.Void) {
+				inputFields[key] = field.input
+			}
+
+			outputFields[key] = field.output
 		}
 	}
 
 	return {
 		input: Schema.Struct(inputFields) as Schema.Struct<{
-			[K in keyof MergedFields<T>]: MergedFields<T>[K]["input"]
+			[K in keyof MergedFields<T> as MergedFields<T>[K]["input"] extends Schema.Void 
+				? never 
+				: K]: MergedFields<T>[K]["input"]
 		}>,
 		output: Schema.Struct(outputFields) as Schema.Struct<{
 			[K in keyof MergedFields<T>]: MergedFields<T>[K]["output"]

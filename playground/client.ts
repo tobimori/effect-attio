@@ -36,12 +36,7 @@ const program = Effect.gen(function* () {
 	yield* Effect.log("\n3. Testing CRUD operations...")
 	const crudTests = Effect.gen(function* () {
 		const newPerson = yield* attio.people.create({
-			name: {
-				first_name: "Test",
-				last_name: "User",
-				full_name: "Test User",
-			},
-			email_addresses: [{ email_address: "test@example.com" }],
+			email_addresses: ["tobias@test.com"] as const,
 		})
 		yield* Effect.log("Created person:", JSON.stringify(newPerson, null, 2))
 
@@ -55,14 +50,14 @@ const program = Effect.gen(function* () {
 		const updatedPerson = yield* attio.people.update(newPerson.id.record_id, {
 			job_title: "Software Engineer",
 		})
-		yield* Effect.log("Updated job title:", updatedPerson.job_title)
+		yield* Effect.log("Updated job title:", updatedPerson.values.job_title)
 
 		// test patch operation
 		yield* Effect.log("\n6. Patching person...")
 		const patchedPerson = yield* attio.people.patch(newPerson.id.record_id, {
 			description: "Test user created via API",
 		})
-		yield* Effect.log("Patched description:", patchedPerson.description)
+		yield* Effect.log("Patched description:", patchedPerson.values.description)
 
 		// test assert operation
 		yield* Effect.log("\n7. Testing assert operation...")
@@ -72,7 +67,7 @@ const program = Effect.gen(function* () {
 		})
 		yield* Effect.log(
 			"Asserted person (should update existing):",
-			assertedPerson.job_title,
+			assertedPerson.values.job_title,
 		)
 
 		// test list attribute values
@@ -110,8 +105,9 @@ const program = Effect.gen(function* () {
 	})
 
 	yield* workspaceTests.pipe(
-		Effect.catchAll(() =>
+		Effect.catchAll((error) =>
 			Effect.log(
+				error,
 				"Workspaces/Users might not be enabled in your Attio workspace",
 			),
 		),

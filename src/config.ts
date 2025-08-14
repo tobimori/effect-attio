@@ -2,7 +2,10 @@ import type { AttributeDef } from "./schemas/attribute-builder.js"
 import { createSchemas } from "./schemas/helpers.js"
 import * as StandardObjects from "./schemas/objects.js"
 
-export type ObjectConfig = boolean | Record<string, AttributeDef>
+// Objects can have fields that are either AttributeDef or have input/output properties (like .Multiple)
+type AttributeLike = AttributeDef | { input: any; output: any }
+
+export type ObjectConfig = boolean | Record<string, AttributeLike>
 
 export type ObjectsConfig<T extends Record<string, ObjectConfig> = {}> = {
 	objects?: T
@@ -21,7 +24,7 @@ export type EnabledObjects<T extends Record<string, ObjectConfig>> = {
 			? K extends keyof typeof StandardObjects
 				? (typeof StandardObjects)[K]
 				: never
-			: T[K] extends Record<string, AttributeDef>
+			: T[K] extends Record<string, AttributeLike>
 				? T[K]
 				: never
 }

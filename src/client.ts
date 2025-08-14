@@ -37,6 +37,18 @@ export interface ListParams {
 	sort_by?: string
 }
 
+// Record structure returned by Attio API
+export interface AttioRecord<T> {
+	id: {
+		workspace_id: string
+		object_id: string
+		record_id: string
+	}
+	created_at: string
+	web_url?: string
+	values: T
+}
+
 export const AttioClient =
 	<Self>() =>
 	<L extends string, T extends Record<string, ObjectConfig> = {}>(
@@ -51,10 +63,12 @@ export const AttioClient =
 						params?: ListParams,
 					) => Effect.Effect<
 						Array<
-							Schema.Schema.Type<
-								ReturnType<
-									typeof createSchemas<MergedObjectFields<T>[K]>
-								>["output"]
+							AttioRecord<
+								Schema.Schema.Type<
+									ReturnType<
+										typeof createSchemas<MergedObjectFields<T>[K]>
+									>["output"]
+								>
 							>
 						>,
 						never
@@ -67,10 +81,12 @@ export const AttioClient =
 							>["input"]
 						>,
 					) => Effect.Effect<
-						Schema.Schema.Type<
-							ReturnType<
-								typeof createSchemas<MergedObjectFields<T>[K]>
-							>["output"]
+						AttioRecord<
+							Schema.Schema.Type<
+								ReturnType<
+									typeof createSchemas<MergedObjectFields<T>[K]>
+								>["output"]
+							>
 						>,
 						never
 					>
@@ -81,20 +97,24 @@ export const AttioClient =
 							>["input"]
 						>,
 					) => Effect.Effect<
-						Schema.Schema.Type<
-							ReturnType<
-								typeof createSchemas<MergedObjectFields<T>[K]>
-							>["output"]
+						AttioRecord<
+							Schema.Schema.Type<
+								ReturnType<
+									typeof createSchemas<MergedObjectFields<T>[K]>
+								>["output"]
+							>
 						>,
 						never
 					>
 					get: (
 						id: string,
 					) => Effect.Effect<
-						Schema.Schema.Type<
-							ReturnType<
-								typeof createSchemas<MergedObjectFields<T>[K]>
-							>["output"]
+						AttioRecord<
+							Schema.Schema.Type<
+								ReturnType<
+									typeof createSchemas<MergedObjectFields<T>[K]>
+								>["output"]
+							>
 						>,
 						never
 					>
@@ -108,10 +128,12 @@ export const AttioClient =
 							>
 						>,
 					) => Effect.Effect<
-						Schema.Schema.Type<
-							ReturnType<
-								typeof createSchemas<MergedObjectFields<T>[K]>
-							>["output"]
+						AttioRecord<
+							Schema.Schema.Type<
+								ReturnType<
+									typeof createSchemas<MergedObjectFields<T>[K]>
+								>["output"]
+							>
 						>,
 						never
 					>
@@ -125,10 +147,12 @@ export const AttioClient =
 							>
 						>,
 					) => Effect.Effect<
-						Schema.Schema.Type<
-							ReturnType<
-								typeof createSchemas<MergedObjectFields<T>[K]>
-							>["output"]
+						AttioRecord<
+							Schema.Schema.Type<
+								ReturnType<
+									typeof createSchemas<MergedObjectFields<T>[K]>
+								>["output"]
+							>
 						>,
 						never
 					>

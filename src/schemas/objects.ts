@@ -99,7 +99,7 @@ export const users = {
 	person: Attributes.PersonRecordReference,
 	primary_email_address: Attributes.EmailAddress,
 	user_id: Attributes.Text,
-	workspace: Attributes.WorkspaceRecordReference,
+	workspace: Attributes.WorkspaceRecordReference.Multiple,
 }
 
 /**
@@ -118,5 +118,5 @@ export const workspaces = {
 	name: Attributes.Text,
 	users: Attributes.UserRecordReference.Multiple,
 	company: Attributes.CompanyRecordReference,
-	avatar_Url: Attributes.Text,
+	avatar_url: Attributes.Text,
 }

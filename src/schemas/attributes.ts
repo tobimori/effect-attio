@@ -1,7 +1,7 @@
 import * as Schema from "effect/Schema"
 import { DateTimeISOString } from "../shared/datetime-input.js"
 import { Actor } from "../shared/schemas.js"
-import { type AttributeDef, makeAttribute } from "./attribute-builder.js"
+import { makeAttribute } from "./attribute-builder.js"
 import { CountryCode, CurrencyCode } from "./values.js"
 
 /**
@@ -608,7 +608,12 @@ export const Select = makeAttribute(
 		output: Schema.Struct({
 			attribute_type: Schema.Literal("select"),
 			option: Schema.Struct({
-				id: Schema.UUID,
+				id: Schema.Struct({
+					workspace_id: Schema.UUID,
+					object_id: Schema.UUID,
+					attribute_id: Schema.UUID,
+					option_id: Schema.UUID,
+				}),
 				title: Schema.String,
 				is_archived: Schema.Boolean,
 			}),
@@ -631,7 +636,12 @@ export const SelectWith = (...options: string[]) =>
 			output: Schema.Struct({
 				attribute_type: Schema.Literal("select"),
 				option: Schema.Struct({
-					id: Schema.UUID,
+					id: Schema.Struct({
+						workspace_id: Schema.UUID,
+						object_id: Schema.UUID,
+						attribute_id: Schema.UUID,
+						option_id: Schema.UUID,
+					}),
 					title: Schema.String,
 					is_archived: Schema.Boolean,
 				}),

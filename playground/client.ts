@@ -6,7 +6,6 @@ import { AttioClient } from "../src/client.js"
 class MyAttioClient extends AttioClient<MyAttioClient>()("MyAttioClient", {
 	objects: {
 		users: true,
-		workspaces: true,
 	},
 }) {}
 
@@ -36,8 +35,12 @@ const program = Effect.gen(function* () {
 	yield* Effect.log("\n3. Testing CRUD operations...")
 	const crudTests = Effect.gen(function* () {
 		const newPerson = yield* attio.people.create({
-			email_addresses: ["tobias@test.com"] as const,
+			email_addresses: ["tobias@test.com"],
+			instagram: {
+				value: "test",
+			},
 		})
+
 		yield* Effect.log("Created person:", JSON.stringify(newPerson, null, 2))
 
 		// test get operation
@@ -97,7 +100,7 @@ const program = Effect.gen(function* () {
 	// test workspace and user objects if they exist
 	yield* Effect.log("\n10. Testing workspaces and users...")
 	const workspaceTests = Effect.gen(function* () {
-		const workspacesList = yield* attio.workspaces.list({ limit: 5 })
+		const workspacesList = yield* attio.people.list({ limit: 5 })
 		yield* Effect.log(`Found ${workspacesList.length} workspace records`)
 
 		const usersList = yield* attio.users.list({ limit: 5 })

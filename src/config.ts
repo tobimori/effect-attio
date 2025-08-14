@@ -38,7 +38,9 @@ export type MergedObjectFields<T extends Record<string, ObjectConfig>> = {
 		? T[K] extends false
 			? never
 			: never
-		: K]: (typeof StandardObjects)[K]
+		: K extends typeof DEFAULT_DISABLED_OBJECTS[number]
+			? never
+			: K]: (typeof StandardObjects)[K]
 }
 
 export function processObjectsConfig<T extends Record<string, ObjectConfig>>(

@@ -17,7 +17,7 @@ export const companies = {
 	domains: Attributes.Domains,
 	name: Attributes.Text,
 	description: Attributes.Text,
-	team: Attributes.RecordReferences,
+	team: Attributes.PersonRecordReferences,
 	categories: Attributes.MultiSelect,
 	primary_location: Attributes.Location,
 	angellist: Attributes.Text,
@@ -26,7 +26,7 @@ export const companies = {
 	linkedin: Attributes.Text,
 	twitter: Attributes.Text,
 	associated_deals: Attributes.RecordReferences,
-	associated_workspaces: Attributes.RecordReferences,
+	associated_workspaces: Attributes.WorkspaceRecordReferences,
 }
 
 /**
@@ -43,7 +43,7 @@ export const companies = {
 export const people = {
 	email_addresses: Attributes.EmailAddresses,
 	name: Attributes.PersonalName,
-	company: Attributes.RecordReference,
+	company: Attributes.CompanyRecordReference,
 	description: Attributes.Text,
 	job_title: Attributes.Text,
 	phone_number: Attributes.PhoneNumbers,
@@ -54,7 +54,7 @@ export const people = {
 	linkedin: Attributes.Text,
 	twitter: Attributes.Text,
 	associated_deals: Attributes.RecordReferences,
-	associated_users: Attributes.RecordReferences,
+	associated_users: Attributes.UserRecordReferences,
 }
 
 /**
@@ -71,8 +71,8 @@ export const deals = {
 	state: Attributes.Status,
 	owner: Attributes.ActorReference,
 	value: Attributes.Currency,
-	associated_people: Attributes.RecordReferences,
-	associated_company: Attributes.RecordReference,
+	associated_people: Attributes.PersonRecordReferences,
+	associated_company: Attributes.CompanyRecordReference,
 }
 
 /**
@@ -87,10 +87,10 @@ export const deals = {
  * @see https://docs.attio.com/docs/standard-objects/standard-objects-users
  */
 export const users = {
-	person: Attributes.RecordReference,
+	person: Attributes.PersonRecordReference,
 	primary_email_address: Attributes.EmailAddress,
 	user_id: Attributes.Text,
-	workspace: Attributes.RecordReference,
+	workspace: Attributes.WorkspaceRecordReference,
 }
 
 /**
@@ -107,7 +107,7 @@ export const users = {
 export const workspaces = {
 	workspace_id: Attributes.Text,
 	name: Attributes.Text,
-	users: Attributes.RecordReferences,
-	company: Attributes.RecordReference,
+	users: Attributes.UserRecordReferences,
+	company: Attributes.CompanyRecordReference,
 	avatar_Url: Attributes.Text,
 }

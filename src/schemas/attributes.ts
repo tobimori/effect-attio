@@ -522,7 +522,18 @@ export const Rating: AttributeDef = {
 	),
 }
 
-export const RecordReference: AttributeDef = {
+/**
+ * # Record reference
+ *
+ * **Relationships and one-way links between records**
+ *
+ * Record reference attributes allow you to point to other records of the same or different objects. They enable creating relationships between records, such as linking a person to a company or a deal to associated people.
+ *
+ * This is the single-select variant of the record reference attribute.
+ *
+ * @see https://docs.attio.com/docs/attribute-types/attribute-types-record-reference
+ */
+export const RecordReference = {
 	input: Schema.Union(
 		Schema.UUID, // Record ID
 		Schema.Struct({
@@ -538,9 +549,119 @@ export const RecordReference: AttributeDef = {
 			target_record_id: Schema.UUID,
 		}),
 	),
-}
+} satisfies AttributeDef
 
-export const RecordReferences: AttributeDef = {
+/**
+ * # Company record reference
+ *
+ * **Reference to a company record**
+ *
+ * Special variant of record reference that only allows company objects.
+ * Supports writing with domains as a shorthand.
+ *
+ * @see https://docs.attio.com/docs/attribute-types/attribute-types-record-reference
+ */
+export const CompanyRecordReference = {
+	input: Schema.Union(
+		Schema.String, // Domain string
+		Schema.UUID, // Record ID
+		Schema.Struct({
+			target_object: Schema.Literal("companies"),
+			target_record_id: Schema.UUID,
+		}),
+		Schema.Struct({
+			domains: Schema.Array(Schema.Struct({ domain: Schema.String })),
+			target_object: Schema.Literal("companies"),
+		}),
+	),
+	output: ApiSingleValue(
+		Schema.Struct({
+			...BaseAttribute.fields,
+			attribute_type: Schema.Literal("record-reference"),
+			target_object: Schema.Literal("companies"),
+			target_record_id: Schema.UUID,
+		}),
+	),
+} satisfies AttributeDef
+
+/**
+ * # Person record reference  
+ *
+ * **Reference to a person record**
+ *
+ * Special variant of record reference that only allows person objects.
+ * Supports writing with email addresses as a shorthand.
+ *
+ * @see https://docs.attio.com/docs/attribute-types/attribute-types-record-reference
+ */
+export const PersonRecordReference = {
+	input: Schema.Union(
+		Schema.String, // Email string
+		Schema.UUID, // Record ID
+		Schema.Struct({
+			target_object: Schema.Literal("people"),
+			target_record_id: Schema.UUID,
+		}),
+		Schema.Struct({
+			email_addresses: Schema.Array(Schema.Struct({ email_address: Schema.String })),
+			target_object: Schema.Literal("people"),
+		}),
+	),
+	output: ApiSingleValue(
+		Schema.Struct({
+			...BaseAttribute.fields,
+			attribute_type: Schema.Literal("record-reference"),
+			target_object: Schema.Literal("people"),
+			target_record_id: Schema.UUID,
+		}),
+	),
+} satisfies AttributeDef
+
+/**
+ * # Workspace record reference
+ *
+ * **Reference to a workspace record**
+ *
+ * Special variant of record reference that only allows workspace objects.
+ * Supports writing with workspace_id as a shorthand.
+ *
+ * @see https://docs.attio.com/docs/attribute-types/attribute-types-record-reference
+ */
+export const WorkspaceRecordReference = {
+	input: Schema.Union(
+		Schema.String, // Workspace ID string
+		Schema.UUID, // Record ID
+		Schema.Struct({
+			target_object: Schema.Literal("workspaces"),
+			target_record_id: Schema.UUID,
+		}),
+		Schema.Struct({
+			workspace_id: Schema.Array(Schema.Struct({ value: Schema.String })),
+			target_object: Schema.Literal("workspaces"),
+		}),
+	),
+	output: ApiSingleValue(
+		Schema.Struct({
+			...BaseAttribute.fields,
+			attribute_type: Schema.Literal("record-reference"),
+			target_object: Schema.Literal("workspaces"),
+			target_record_id: Schema.UUID,
+		}),
+	),
+} satisfies AttributeDef
+
+/**
+ * # Record references
+ *
+ * **Relationships and one-way links between records**
+ *
+ * Record reference attributes allow you to point to other records of the same or different objects. They enable creating relationships between records, such as linking a person to a company or a deal to associated people.
+ *
+ * This is the multi-select variant of the record reference attribute.
+ *
+ * @see https://docs.attio.com/docs/attribute-types/attribute-types-record-reference
+ */
+export const RecordReferences = {
 	input: Schema.Union(
 		Schema.UUID,
 		Schema.Array(Schema.UUID),
@@ -559,7 +680,124 @@ export const RecordReferences: AttributeDef = {
 			target_record_id: Schema.UUID,
 		}),
 	),
-}
+} satisfies AttributeDef
+
+/**
+ * # Person record references
+ *
+ * **References to person records**
+ *
+ * Multi-select variant of person record reference.
+ * Supports writing with email addresses as a shorthand.
+ *
+ * @see https://docs.attio.com/docs/attribute-types/attribute-types-record-reference
+ */
+export const PersonRecordReferences = {
+	input: Schema.Union(
+		Schema.String, // Single email string
+		Schema.Array(Schema.String), // Array of email strings
+		Schema.UUID,
+		Schema.Array(Schema.UUID),
+		Schema.Array(
+			Schema.Struct({
+				target_object: Schema.Literal("people"),
+				target_record_id: Schema.UUID,
+			}),
+		),
+		Schema.Array(
+			Schema.Struct({
+				email_addresses: Schema.Array(Schema.Struct({ email_address: Schema.String })),
+				target_object: Schema.Literal("people"),
+			}),
+		),
+	),
+	output: Schema.Array(
+		Schema.Struct({
+			...BaseAttribute.fields,
+			attribute_type: Schema.Literal("record-reference"),
+			target_object: Schema.Literal("people"),
+			target_record_id: Schema.UUID,
+		}),
+	),
+} satisfies AttributeDef
+
+/**
+ * # User record references
+ *
+ * **References to user records**
+ *
+ * Multi-select variant of user record reference.
+ * Supports writing with user_id as a shorthand.
+ *
+ * @see https://docs.attio.com/docs/attribute-types/attribute-types-record-reference
+ */
+export const UserRecordReferences = {
+	input: Schema.Union(
+		Schema.String, // Single user ID string
+		Schema.Array(Schema.String), // Array of user ID strings
+		Schema.UUID,
+		Schema.Array(Schema.UUID),
+		Schema.Array(
+			Schema.Struct({
+				target_object: Schema.Literal("users"),
+				target_record_id: Schema.UUID,
+			}),
+		),
+		Schema.Array(
+			Schema.Struct({
+				user_id: Schema.Array(Schema.Struct({ value: Schema.String })),
+				target_object: Schema.Literal("users"),
+			}),
+		),
+	),
+	output: Schema.Array(
+		Schema.Struct({
+			...BaseAttribute.fields,
+			attribute_type: Schema.Literal("record-reference"),
+			target_object: Schema.Literal("users"),
+			target_record_id: Schema.UUID,
+		}),
+	),
+} satisfies AttributeDef
+
+/**
+ * # Workspace record references
+ *
+ * **References to workspace records**
+ *
+ * Multi-select variant of workspace record reference.
+ * Supports writing with workspace_id as a shorthand.
+ *
+ * @see https://docs.attio.com/docs/attribute-types/attribute-types-record-reference
+ */
+export const WorkspaceRecordReferences = {
+	input: Schema.Union(
+		Schema.String, // Single workspace ID string
+		Schema.Array(Schema.String), // Array of workspace ID strings
+		Schema.UUID,
+		Schema.Array(Schema.UUID),
+		Schema.Array(
+			Schema.Struct({
+				target_object: Schema.Literal("workspaces"),
+				target_record_id: Schema.UUID,
+			}),
+		),
+		Schema.Array(
+			Schema.Struct({
+				workspace_id: Schema.Array(Schema.Struct({ value: Schema.String })),
+				target_object: Schema.Literal("workspaces"),
+			}),
+		),
+	),
+	output: Schema.Array(
+		Schema.Struct({
+			...BaseAttribute.fields,
+			attribute_type: Schema.Literal("record-reference"),
+			target_object: Schema.Literal("workspaces"),
+			target_record_id: Schema.UUID,
+		}),
+	),
+} satisfies AttributeDef
 
 export const Select: AttributeDef = {
 	input: Schema.Union(

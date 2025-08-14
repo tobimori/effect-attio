@@ -10,6 +10,14 @@ export const ReadOnlyAttribute = <T extends AttributeDef>(field: T) => ({
 	output: field.output,
 })
 
+/**
+ * Helper for optional fields that may not be present in the response
+ */
+export const OptionalAttribute = <T extends AttributeDef>(field: T) => ({
+	input: Schema.optional(field.input),
+	output: Schema.optional(field.output),
+})
+
 const baseObjectAttributes = {
 	created_at: ReadOnlyAttribute(Attributes.Timestamp),
 	created_by: ReadOnlyAttribute(Attributes.ActorReference),

@@ -1,4 +1,5 @@
 import * as Attributes from "./attributes.js"
+import { OptionalAttribute } from "./helpers.js"
 
 /**
  * # Companies
@@ -25,8 +26,8 @@ export const companies = {
 	instagram: Attributes.Text,
 	linkedin: Attributes.Text,
 	twitter: Attributes.Text,
-	associated_deals: Attributes.RecordReferences,
-	associated_workspaces: Attributes.WorkspaceRecordReferences,
+	associated_deals: OptionalAttribute(Attributes.RecordReferences),
+	associated_workspaces: OptionalAttribute(Attributes.WorkspaceRecordReferences),
 }
 
 /**
@@ -46,15 +47,15 @@ export const people = {
 	company: Attributes.CompanyRecordReference,
 	description: Attributes.Text,
 	job_title: Attributes.Text,
-	phone_number: Attributes.PhoneNumbers,
+	phone_numbers: Attributes.PhoneNumbers,
 	primary_location: Attributes.Location,
 	angellist: Attributes.Text,
 	facebook: Attributes.Text,
 	instagram: Attributes.Text,
 	linkedin: Attributes.Text,
 	twitter: Attributes.Text,
-	associated_deals: Attributes.RecordReferences,
-	associated_users: Attributes.UserRecordReferences,
+	associated_deals: OptionalAttribute(Attributes.RecordReferences),
+	associated_users: OptionalAttribute(Attributes.UserRecordReferences),
 }
 
 /**

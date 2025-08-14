@@ -1,3 +1,4 @@
+import * as ParseResult from "effect/ParseResult"
 import * as Schema from "effect/Schema"
 import { Actor } from "../shared/schemas.js"
 
@@ -303,13 +304,14 @@ export const CountryCode = Schema.Literal(
 )
 
 // unwraps array on decode, wraps on encode
+// handles empty arrays by returning null
 export const ApiSingleValue = <A, I, R>(itemSchema: Schema.Schema<A, I, R>) =>
-	Schema.transform(
+	Schema.transformOrFail(
 		Schema.Array(itemSchema).pipe(Schema.maxItems(1)),
-		itemSchema,
+		Schema.NullOr(Schema.typeSchema(itemSchema)),
 		{
 			strict: false,
-			decode: (arr) => arr[0],
-			encode: (item) => [item],
+			decode: (arr) => ParseResult.succeed(arr.length === 0 ? null : arr[0]),
+			encode: (item) => ParseResult.succeed(item === null ? [] : [item]),
 		},
 	)

@@ -39,12 +39,20 @@ export const ActorReference = {
 		}),
 	),
 	output: ApiSingleValue(
-		Schema.Struct({
-			...BaseAttribute.fields,
-			attribute_type: Schema.Literal("actor-reference"),
-			referenced_actor_type: ActorType,
-			referenced_actor_id: Schema.UUID,
-		}),
+		Schema.Union(
+			Schema.Struct({
+				...BaseAttribute.fields,
+				attribute_type: Schema.Literal("actor-reference"),
+				referenced_actor_type: Schema.Literal("system"),
+				referenced_actor_id: Schema.Null,
+			}),
+			Schema.Struct({
+				...BaseAttribute.fields,
+				attribute_type: Schema.Literal("actor-reference"),
+				referenced_actor_type: Schema.Literal("api-token", "workspace-member", "app"),
+				referenced_actor_id: Schema.UUID,
+			}),
+		),
 	),
 } satisfies AttributeDef
 
@@ -65,12 +73,20 @@ export const ActorReferences = {
 	/* Currently, the only type of actor that can be explicitly set in our API is "workspace-member". We may expand this list in future. */
 	input: Schema.Array(ActorReference.input),
 	output: Schema.Array(
-		Schema.Struct({
-			...BaseAttribute.fields,
-			attribute_type: Schema.Literal("actor-reference"),
-			referenced_actor_type: ActorType,
-			referenced_actor_id: Schema.UUID,
-		}),
+		Schema.Union(
+			Schema.Struct({
+				...BaseAttribute.fields,
+				attribute_type: Schema.Literal("actor-reference"),
+				referenced_actor_type: Schema.Literal("system"),
+				referenced_actor_id: Schema.Null,
+			}),
+			Schema.Struct({
+				...BaseAttribute.fields,
+				attribute_type: Schema.Literal("actor-reference"),
+				referenced_actor_type: Schema.Literal("api-token", "workspace-member", "app"),
+				referenced_actor_id: Schema.UUID,
+			}),
+		),
 	),
 } satisfies AttributeDef
 
@@ -897,7 +913,12 @@ export const MultiSelect = {
 			...BaseAttribute.fields,
 			attribute_type: Schema.Literal("select"),
 			option: Schema.Struct({
-				id: Schema.UUID,
+				id: Schema.Struct({
+					workspace_id: Schema.UUID,
+					object_id: Schema.UUID,
+					attribute_id: Schema.UUID,
+					option_id: Schema.UUID,
+				}),
 				title: Schema.String,
 				is_archived: Schema.Boolean,
 			}),
@@ -922,7 +943,12 @@ export const MultiSelectWith = (...options: string[]): AttributeDef => ({
 			...BaseAttribute.fields,
 			attribute_type: Schema.Literal("select"),
 			option: Schema.Struct({
-				id: Schema.UUID,
+				id: Schema.Struct({
+					workspace_id: Schema.UUID,
+					object_id: Schema.UUID,
+					attribute_id: Schema.UUID,
+					option_id: Schema.UUID,
+				}),
 				title: Schema.String,
 				is_archived: Schema.Boolean,
 			}),
@@ -957,7 +983,12 @@ export const Status = {
 			...BaseAttribute.fields,
 			attribute_type: Schema.Literal("status"),
 			status: Schema.Struct({
-				id: Schema.UUID,
+				id: Schema.Struct({
+					workspace_id: Schema.UUID,
+					object_id: Schema.UUID,
+					attribute_id: Schema.UUID,
+					status_id: Schema.UUID,
+				}),
 				title: Schema.String,
 			}),
 		}),

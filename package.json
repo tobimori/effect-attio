@@ -31,10 +31,9 @@
 		"./*": "./src/*.ts"
 	},
 	"scripts": {
-		"build": "tsc -b tsconfig.build.json && cp -r src dist/ && cp package.json dist/",
+		"build": "pnpm clean && tsc -b tsconfig.build.json && cp -r src dist/src",
 		"check": "tsc -b tsconfig.json",
-		"clean": "rm -rf dist .tsbuildinfo",
-		"prepublishOnly": "pnpm clean && pnpm build"
+		"clean": "rm -rf dist .tsbuildinfo"
 	},
 	"peerDependencies": {
 		"@effect/platform": "^0.90.2",

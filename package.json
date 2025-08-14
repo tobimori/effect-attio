@@ -1,6 +1,6 @@
 {
 	"name": "effect-attio",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"type": "module",
 	"license": "MIT",
 	"description": "Attio API SDK for Effect",
@@ -30,7 +30,7 @@
 		"./*": "./src/*.ts"
 	},
 	"scripts": {
-		"build": "pnpm clean && tsc -b tsconfig.build.json && cp -r src dist/src && cp package.json dist/",
+		"build": "pnpm clean && tsc -b tsconfig.build.json && cp -r src dist/src && cp package.json README.md LICENSE dist/",
 		"check": "tsc -b tsconfig.json",
 		"clean": "rm -rf dist .tsbuildinfo",
 		"release": "pnpm build && npm publish dist"

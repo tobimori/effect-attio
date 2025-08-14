@@ -1,4 +1,4 @@
-import type { AttributeDef } from "./schemas/attributes.js"
+import type { AttributeDef } from "./schemas/attribute-builder.js"
 import { createSchemas } from "./schemas/helpers.js"
 import * as StandardObjects from "./schemas/objects.js"
 

@@ -39,6 +39,7 @@ const program = Effect.gen(function* () {
 			name: {
 				first_name: "Test",
 				last_name: "User",
+				full_name: "Test User",
 			},
 			email_addresses: [{ email_address: "test@example.com" }],
 		})

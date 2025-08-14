@@ -1,17 +1,8 @@
 import * as Schema from "effect/Schema"
 import { DateTimeISOString } from "../shared/datetime-input.js"
-import { Actor, ActorType } from "../shared/schemas.js"
-import {
-	ApiSingleValue,
-	BaseAttribute,
-	CountryCode,
-	CurrencyCode,
-} from "./values.js"
-
-export interface AttributeDef {
-	input: Schema.Schema.Any
-	output: Schema.Schema.Any
-}
+import { Actor } from "../shared/schemas.js"
+import { type AttributeDef, makeAttribute } from "./attribute-builder.js"
+import { CountryCode, CurrencyCode } from "./values.js"
 
 /**
  * # Actor reference (User)
@@ -26,69 +17,38 @@ export interface AttributeDef {
  *
  * @see https://docs.attio.com/docs/attribute-types/attribute-types-actor-reference
  */
-export const ActorReference = {
-	/* Currently, the only type of actor that can be explicitly set in our API is "workspace-member". We may expand this list in future. */
-	input: Schema.Union(
-		Schema.String,
-		Schema.Struct({
-			workspace_member_email_address: Schema.String,
-		}),
-		Schema.Struct({
-			referenced_actor_type: Schema.Literal("workspace-member"),
-			referenced_actor_id: Schema.UUID,
-		}),
-	),
-	output: ApiSingleValue(
-		Schema.Union(
+export const ActorReference = makeAttribute(
+	{
+		/* Currently, the only type of actor that can be explicitly set in our API is "workspace-member". We may expand this list in future. */
+		input: Schema.Union(
+			Schema.String,
 			Schema.Struct({
-				...BaseAttribute.fields,
+				workspace_member_email_address: Schema.String,
+			}),
+			Schema.Struct({
+				referenced_actor_type: Schema.Literal("workspace-member"),
+				referenced_actor_id: Schema.UUID,
+			}),
+		),
+		output: Schema.Union(
+			Schema.Struct({
 				attribute_type: Schema.Literal("actor-reference"),
 				referenced_actor_type: Schema.Literal("system"),
 				referenced_actor_id: Schema.Null,
 			}),
 			Schema.Struct({
-				...BaseAttribute.fields,
 				attribute_type: Schema.Literal("actor-reference"),
-				referenced_actor_type: Schema.Literal("api-token", "workspace-member", "app"),
+				referenced_actor_type: Schema.Literal(
+					"api-token",
+					"workspace-member",
+					"app",
+				),
 				referenced_actor_id: Schema.UUID,
 			}),
 		),
-	),
-} satisfies AttributeDef
-
-/**
- * # Actor references (Users)
- *
- * **References to workspace members and others**
- *
- * Actor references are used to link to actors in Attio. You’re most likely to encounter this attribute via the `created_by` attribute which is available on every object, the owner attribute on a deal object, or the `strongest_connection_user` on a company or person.
- *
- * This is the multi-select variant of the field.
- *
- * Please note, in the mobile and web clients, attributes of this type are marked as “User” attributes.
- *
- * @see https://docs.attio.com/docs/attribute-types/attribute-types-actor-reference
- */
-export const ActorReferences = {
-	/* Currently, the only type of actor that can be explicitly set in our API is "workspace-member". We may expand this list in future. */
-	input: Schema.Array(ActorReference.input),
-	output: Schema.Array(
-		Schema.Union(
-			Schema.Struct({
-				...BaseAttribute.fields,
-				attribute_type: Schema.Literal("actor-reference"),
-				referenced_actor_type: Schema.Literal("system"),
-				referenced_actor_id: Schema.Null,
-			}),
-			Schema.Struct({
-				...BaseAttribute.fields,
-				attribute_type: Schema.Literal("actor-reference"),
-				referenced_actor_type: Schema.Literal("api-token", "workspace-member", "app"),
-				referenced_actor_id: Schema.UUID,
-			}),
-		),
-	),
-} satisfies AttributeDef
+	},
+	{ multiple: true },
+)
 
 /**
  * # Checkbox
@@ -103,27 +63,13 @@ export const ActorReferences = {
  *
  * @see https://docs.attio.com/docs/attribute-types/attribute-types-checkbox
  */
-export const Checkbox = {
-	input: Schema.Union(
-		Schema.Boolean,
-		Schema.Literal("true", "false"),
-		Schema.Array(
-			Schema.Union(Schema.Boolean, Schema.Literal("true", "false")),
-		).pipe(Schema.maxItems(1)),
-		Schema.Array(
-			Schema.Struct({
-				value: Schema.Boolean,
-			}),
-		).pipe(Schema.maxItems(1)),
-	),
-	output: ApiSingleValue(
-		Schema.Struct({
-			...BaseAttribute.fields,
-			attribute_type: Schema.Literal("checkbox"),
-			value: Schema.Boolean,
-		}),
-	),
-} satisfies AttributeDef
+export const Checkbox = makeAttribute({
+	input: Schema.Union(Schema.Boolean, Schema.Literal("true", "false")),
+	output: Schema.Struct({
+		attribute_type: Schema.Literal("checkbox"),
+		value: Schema.Boolean,
+	}),
+})
 
 /**
  * # Currency
@@ -140,7 +86,7 @@ export const Checkbox = {
  *
  * @see https://docs.attio.com/docs/attribute-types/attribute-types-currency
  */
-export const Currency = {
+export const Currency = makeAttribute({
 	input: Schema.Union(
 		Schema.Number,
 		Schema.String,
@@ -148,15 +94,12 @@ export const Currency = {
 			currency_value: Schema.Union(Schema.Number, Schema.String),
 		}),
 	),
-	output: ApiSingleValue(
-		Schema.Struct({
-			...BaseAttribute.fields,
-			attribute_type: Schema.Literal("currency"),
-			currency_value: Schema.NumberFromString,
-			currency_code: CurrencyCode,
-		}),
-	),
-} satisfies AttributeDef
+	output: Schema.Struct({
+		attribute_type: Schema.Literal("currency"),
+		currency_value: Schema.NumberFromString,
+		currency_code: CurrencyCode,
+	}),
+})
 
 /**
  * # Date
@@ -171,24 +114,21 @@ export const Currency = {
  *
  * @see https://docs.attio.com/docs/attribute-types/attribute-types-date
  */
-export const Date = {
+export const Date = makeAttribute({
 	input: Schema.Union(
 		DateTimeISOString,
 		Schema.Struct({
 			value: DateTimeISOString,
 		}),
 	),
-	output: ApiSingleValue(
-		Schema.Struct({
-			...BaseAttribute.fields,
-			attribute_type: Schema.Literal("date"),
-			value: Schema.DateTimeUtc,
-		}),
-	),
-} satisfies AttributeDef
+	output: Schema.Struct({
+		attribute_type: Schema.Literal("date"),
+		value: Schema.DateTimeUtc,
+	}),
+})
 
 /**
- * # Domains
+ * # Domain
  *
  * **An internet domain**
  *
@@ -202,30 +142,22 @@ export const Date = {
  *
  * @see https://docs.attio.com/docs/attribute-types/attribute-types-domain
  */
-export const Domains = {
-	input: Schema.Union(
-		Schema.String,
-		Schema.Struct({
-			domain: Schema.String,
-		}),
-		Schema.Array(
-			Schema.Union(
-				Schema.String,
-				Schema.Struct({
-					domain: Schema.String,
-				}),
-			),
+export const Domain = makeAttribute(
+	{
+		input: Schema.Union(
+			Schema.String,
+			Schema.Struct({
+				domain: Schema.String,
+			}),
 		),
-	),
-	output: Schema.Array(
-		Schema.Struct({
-			...BaseAttribute.fields,
+		output: Schema.Struct({
 			attribute_type: Schema.Literal("domain"),
 			domain: Schema.String,
 			root_domain: Schema.String,
 		}),
-	),
-} satisfies AttributeDef
+	},
+	{ multiple: true },
+)
 
 /**
  * # Email address
@@ -240,16 +172,15 @@ export const Domains = {
  *
  * @see https://docs.attio.com/docs/attribute-types/attribute-types-email-address
  */
-export const EmailAddress: AttributeDef = {
-	input: Schema.Union(
-		Schema.String,
-		Schema.Struct({
-			email_address: Schema.String,
-		}),
-	),
-	output: ApiSingleValue(
-		Schema.Struct({
-			...BaseAttribute.fields,
+export const EmailAddress = makeAttribute(
+	{
+		input: Schema.Union(
+			Schema.String,
+			Schema.Struct({
+				email_address: Schema.String,
+			}),
+		),
+		output: Schema.Struct({
 			attribute_type: Schema.Literal("email-address"),
 			email_address: Schema.String,
 			original_email_address: Schema.String,
@@ -257,36 +188,9 @@ export const EmailAddress: AttributeDef = {
 			email_root_domain: Schema.String,
 			email_local_specifier: Schema.String,
 		}),
-	),
-}
-
-/**
- * # Email addresses
- *
- * **An email address**
- *
- * Email address attributes are a string referencing an internet email address. For example, an email address might be `"example@example.com"`. Like domain attributes, we do some parsing of the email domain part, as well as validating the general shape of an email address overall.
- *
- * It isn’t currently possible to create your own email address attributes. You’ll find only the multiselect `email_addresses` attribute on a person object, or the single attribute `email_address` attribute on the user standard object.
- *
- * This is the multi-select variant of the email address attribute.
- *
- * @see https://docs.attio.com/docs/attribute-types/attribute-types-email-address
- */
-export const EmailAddresses: AttributeDef = {
-	input: Schema.Array(EmailAddress.input),
-	output: Schema.Array(
-		Schema.Struct({
-			...BaseAttribute.fields,
-			attribute_type: Schema.Literal("email-address"),
-			email_address: Schema.String,
-			original_email_address: Schema.String,
-			email_domain: Schema.String,
-			email_root_domain: Schema.String,
-			email_local_specifier: Schema.String,
-		}),
-	),
-}
+	},
+	{ multiple: true },
+)
 
 /**
  * # Interaction
@@ -301,22 +205,20 @@ export const EmailAddresses: AttributeDef = {
  *
  * @see https://docs.attio.com/docs/attribute-types/attribute-types-interaction
  */
-export const Interaction = {
+export const Interaction = makeAttribute({
 	/* It is not currently possible to write Interaction values, they are only created by the Attio system. */
 	input: Schema.Void,
-	output: ApiSingleValue(
-		Schema.Struct({
-			...BaseAttribute.fields,
-			attribute_type: Schema.Literal("interaction"),
-			interaction_type: Schema.Literal("email", "calendar-event"),
-			interacted_at: Schema.DateTimeUtc,
-			owner_actor: Actor,
-		}),
-	),
-} satisfies AttributeDef
+	output: Schema.Struct({
+		attribute_type: Schema.Literal("interaction"),
+		interaction_type: Schema.Literal("email", "calendar-event"),
+		interacted_at: Schema.DateTimeUtc,
+		owner_actor: Actor,
+	}),
+})
 
 /**
  * # Location
+ *
  * **A physical location in the world**
  *
  * Location attributes model a physical location in the world. We store all location properties (address lines, postcode, country code, etc) on a single attribute value, rather than separate attributes. This means that when working with locations, updates must be atomic—every property must be specified, even if it is null.
@@ -338,7 +240,7 @@ export const Interaction = {
  *
  * @see https://docs.attio.com/docs/attribute-types/attribute-types-location
  */
-export const Location = {
+export const Location = makeAttribute({
 	input: Schema.Union(
 		Schema.String, // Address string
 		Schema.Struct({
@@ -354,23 +256,20 @@ export const Location = {
 			longitude: Schema.NullOr(Schema.NumberFromString),
 		}),
 	),
-	output: ApiSingleValue(
-		Schema.Struct({
-			...BaseAttribute.fields,
-			attribute_type: Schema.Literal("location"),
-			line_1: Schema.NullOr(Schema.String),
-			line_2: Schema.NullOr(Schema.String),
-			line_3: Schema.NullOr(Schema.String),
-			line_4: Schema.NullOr(Schema.String),
-			locality: Schema.NullOr(Schema.String),
-			region: Schema.NullOr(Schema.String),
-			postcode: Schema.NullOr(Schema.String),
-			country_code: Schema.NullOr(CountryCode),
-			latitude: Schema.NullOr(Schema.NumberFromString),
-			longitude: Schema.NullOr(Schema.NumberFromString),
-		}),
-	),
-} satisfies AttributeDef
+	output: Schema.Struct({
+		attribute_type: Schema.Literal("location"),
+		line_1: Schema.NullOr(Schema.String),
+		line_2: Schema.NullOr(Schema.String),
+		line_3: Schema.NullOr(Schema.String),
+		line_4: Schema.NullOr(Schema.String),
+		locality: Schema.NullOr(Schema.String),
+		region: Schema.NullOr(Schema.String),
+		postcode: Schema.NullOr(Schema.String),
+		country_code: Schema.NullOr(CountryCode),
+		latitude: Schema.NullOr(Schema.NumberFromString),
+		longitude: Schema.NullOr(Schema.NumberFromString),
+	}),
+})
 
 /**
  * # (Personal) name
@@ -383,25 +282,22 @@ export const Location = {
  *
  * @see https://docs.attio.com/docs/attribute-types/attribute-types-personal-name
  */
-export const PersonalName = {
+export const PersonalName = makeAttribute({
 	input: Schema.Union(
 		Schema.String, // "Last, First" format
 		Schema.Struct({
 			first_name: Schema.String,
 			last_name: Schema.String,
-			full_name: Schema.optional(Schema.String),
-		}),
-	),
-	output: ApiSingleValue(
-		Schema.Struct({
-			...BaseAttribute.fields,
-			attribute_type: Schema.Literal("personal-name"),
-			first_name: Schema.String,
-			last_name: Schema.String,
 			full_name: Schema.String,
 		}),
 	),
-} satisfies AttributeDef
+	output: Schema.Struct({
+		attribute_type: Schema.Literal("personal-name"),
+		first_name: Schema.String,
+		last_name: Schema.String,
+		full_name: Schema.String,
+	}),
+})
 
 /**
  * # Number
@@ -416,23 +312,18 @@ export const PersonalName = {
  *
  * @see https://docs.attio.com/docs/attribute-types/attribute-types-number
  */
-export const Number = {
+export const Number = makeAttribute({
 	input: Schema.Union(
 		Schema.Number,
-		Schema.Array(
-			Schema.Struct({
-				value: Schema.Number,
-			}),
-		),
-	),
-	output: ApiSingleValue(
 		Schema.Struct({
-			...BaseAttribute.fields,
-			attribute_type: Schema.Literal("number"),
 			value: Schema.Number,
 		}),
 	),
-} satisfies AttributeDef
+	output: Schema.Struct({
+		attribute_type: Schema.Literal("number"),
+		value: Schema.Number,
+	}),
+})
 
 /**
  * # Phone number
@@ -447,59 +338,24 @@ export const Number = {
  *
  * @see https://docs.attio.com/docs/attribute-types/attribute-types-phone-number
  */
-export const PhoneNumber: AttributeDef = {
-	input: Schema.Union(
-		Schema.String,
-		Schema.Struct({
-			original_phone_number: Schema.String,
-			country_code: Schema.NullOr(CountryCode),
-		}),
-	),
-	output: ApiSingleValue(
-		Schema.Struct({
-			...BaseAttribute.fields,
-			attribute_type: Schema.Literal("phone-number"),
-			original_phone_number: Schema.String,
-			normalized_phone_number: Schema.String,
-			country_code: CountryCode,
-		}),
-	),
-}
-
-/**
- * # Phone numbers
- *
- * **International telephone numbers**
- *
- * Phone number attributes represent an international telephone number. We follow the E164 format, which means all phone numbers are prefixed with a country code.
- *
- * The only default phone number attribute is the multi-select `phone_numbers` attribute on the person object, although you can create phone number attributes on other objects or lists.
- *
- * This is the multi-select variant of the phone number attribute.
- *
- * @see https://docs.attio.com/docs/attribute-types/attribute-types-phone-number
- */
-export const PhoneNumbers: AttributeDef = {
-	input: Schema.Union(
-		Schema.String,
-		Schema.Array(Schema.String),
-		Schema.Array(
+export const PhoneNumber = makeAttribute(
+	{
+		input: Schema.Union(
+			Schema.String,
 			Schema.Struct({
 				original_phone_number: Schema.String,
 				country_code: Schema.NullOr(CountryCode),
 			}),
 		),
-	),
-	output: Schema.Array(
-		Schema.Struct({
-			...BaseAttribute.fields,
+		output: Schema.Struct({
 			attribute_type: Schema.Literal("phone-number"),
 			original_phone_number: Schema.String,
 			normalized_phone_number: Schema.String,
 			country_code: CountryCode,
 		}),
-	),
-}
+	},
+	{ multiple: true },
+)
 
 /**
  * # Rating
@@ -514,29 +370,24 @@ export const PhoneNumbers: AttributeDef = {
  *
  * @see https://docs.attio.com/docs/attribute-types/attribute-types-rating
  */
-export const Rating: AttributeDef = {
+export const Rating = makeAttribute({
 	input: Schema.Union(
 		Schema.Number.pipe(
 			Schema.greaterThanOrEqualTo(0),
 			Schema.lessThanOrEqualTo(5),
 		),
-		Schema.Array(
-			Schema.Struct({
-				value: Schema.Number.pipe(
-					Schema.greaterThanOrEqualTo(0),
-					Schema.lessThanOrEqualTo(5),
-				),
-			}),
-		).pipe(Schema.maxItems(1)),
-	),
-	output: ApiSingleValue(
 		Schema.Struct({
-			...BaseAttribute.fields,
-			attribute_type: Schema.Literal("rating"),
-			value: Schema.Number,
+			value: Schema.Number.pipe(
+				Schema.greaterThanOrEqualTo(0),
+				Schema.lessThanOrEqualTo(5),
+			),
 		}),
 	),
-}
+	output: Schema.Struct({
+		attribute_type: Schema.Literal("rating"),
+		value: Schema.Number,
+	}),
+})
 
 /**
  * # Record reference
@@ -549,23 +400,23 @@ export const Rating: AttributeDef = {
  *
  * @see https://docs.attio.com/docs/attribute-types/attribute-types-record-reference
  */
-export const RecordReference = {
-	input: Schema.Union(
-		Schema.UUID, // Record ID
-		Schema.Struct({
-			target_object: Schema.String,
-			target_record_id: Schema.UUID,
-		}),
-	),
-	output: ApiSingleValue(
-		Schema.Struct({
-			...BaseAttribute.fields,
+export const RecordReference = makeAttribute(
+	{
+		input: Schema.Union(
+			Schema.UUID, // Record ID
+			Schema.Struct({
+				target_object: Schema.String,
+				target_record_id: Schema.UUID,
+			}),
+		),
+		output: Schema.Struct({
 			attribute_type: Schema.Literal("record-reference"),
 			target_object: Schema.String,
 			target_record_id: Schema.UUID,
 		}),
-	),
-} satisfies AttributeDef
+	},
+	{ multiple: true },
+)
 
 /**
  * # Company record reference
@@ -577,28 +428,28 @@ export const RecordReference = {
  *
  * @see https://docs.attio.com/docs/attribute-types/attribute-types-record-reference
  */
-export const CompanyRecordReference = {
-	input: Schema.Union(
-		Schema.String, // Domain string
-		Schema.UUID, // Record ID
-		Schema.Struct({
-			target_object: Schema.Literal("companies"),
-			target_record_id: Schema.UUID,
-		}),
-		Schema.Struct({
-			domains: Schema.Array(Schema.Struct({ domain: Schema.String })),
-			target_object: Schema.Literal("companies"),
-		}),
-	),
-	output: ApiSingleValue(
-		Schema.Struct({
-			...BaseAttribute.fields,
+export const CompanyRecordReference = makeAttribute(
+	{
+		input: Schema.Union(
+			Schema.String, // Domain string
+			Schema.UUID, // Record ID
+			Schema.Struct({
+				target_object: Schema.Literal("companies"),
+				target_record_id: Schema.UUID,
+			}),
+			Schema.Struct({
+				domains: Schema.Array(Schema.Struct({ domain: Schema.String })),
+				target_object: Schema.Literal("companies"),
+			}),
+		),
+		output: Schema.Struct({
 			attribute_type: Schema.Literal("record-reference"),
 			target_object: Schema.Literal("companies"),
 			target_record_id: Schema.UUID,
 		}),
-	),
-} satisfies AttributeDef
+	},
+	{ multiple: true },
+)
 
 /**
  * # Person record reference
@@ -610,30 +461,90 @@ export const CompanyRecordReference = {
  *
  * @see https://docs.attio.com/docs/attribute-types/attribute-types-record-reference
  */
-export const PersonRecordReference = {
-	input: Schema.Union(
-		Schema.String, // Email string
-		Schema.UUID, // Record ID
-		Schema.Struct({
-			target_object: Schema.Literal("people"),
-			target_record_id: Schema.UUID,
-		}),
-		Schema.Struct({
-			email_addresses: Schema.Array(
-				Schema.Struct({ email_address: Schema.String }),
-			),
-			target_object: Schema.Literal("people"),
-		}),
-	),
-	output: ApiSingleValue(
-		Schema.Struct({
-			...BaseAttribute.fields,
+export const PersonRecordReference = makeAttribute(
+	{
+		input: Schema.Union(
+			Schema.String, // Email string
+			Schema.UUID, // Record ID
+			Schema.Struct({
+				target_object: Schema.Literal("people"),
+				target_record_id: Schema.UUID,
+			}),
+			Schema.Struct({
+				email_addresses: Schema.Array(
+					Schema.Struct({ email_address: Schema.String }),
+				),
+				target_object: Schema.Literal("people"),
+			}),
+		),
+		output: Schema.Struct({
 			attribute_type: Schema.Literal("record-reference"),
 			target_object: Schema.Literal("people"),
 			target_record_id: Schema.UUID,
 		}),
-	),
-} satisfies AttributeDef
+	},
+	{ multiple: true },
+)
+
+/**
+ * # Deal record reference
+ *
+ * **Reference to a deal record**
+ *
+ * Special variant of record reference that only allows deal objects.
+ *
+ * @see https://docs.attio.com/docs/attribute-types/attribute-types-record-reference
+ */
+export const DealRecordReference = makeAttribute(
+	{
+		input: Schema.Union(
+			Schema.UUID, // Record ID
+			Schema.Struct({
+				target_object: Schema.Literal("deals"),
+				target_record_id: Schema.UUID,
+			}),
+		),
+		output: Schema.Struct({
+			attribute_type: Schema.Literal("record-reference"),
+			target_object: Schema.Literal("deals"),
+			target_record_id: Schema.UUID,
+		}),
+	},
+	{ multiple: true },
+)
+
+/**
+ * # User record reference
+ *
+ * **Reference to a user record**
+ *
+ * Special variant of record reference that only allows user objects.
+ * Supports writing with user_id as a shorthand.
+ *
+ * @see https://docs.attio.com/docs/attribute-types/attribute-types-record-reference
+ */
+export const UserRecordReference = makeAttribute(
+	{
+		input: Schema.Union(
+			Schema.String, // User ID string
+			Schema.UUID, // Record ID
+			Schema.Struct({
+				target_object: Schema.Literal("users"),
+				target_record_id: Schema.UUID,
+			}),
+			Schema.Struct({
+				user_id: Schema.Array(Schema.Struct({ value: Schema.String })),
+				target_object: Schema.Literal("users"),
+			}),
+		),
+		output: Schema.Struct({
+			attribute_type: Schema.Literal("record-reference"),
+			target_object: Schema.Literal("users"),
+			target_record_id: Schema.UUID,
+		}),
+	},
+	{ multiple: true },
+)
 
 /**
  * # Workspace record reference
@@ -645,179 +556,28 @@ export const PersonRecordReference = {
  *
  * @see https://docs.attio.com/docs/attribute-types/attribute-types-record-reference
  */
-export const WorkspaceRecordReference = {
-	input: Schema.Union(
-		Schema.String, // Workspace ID string
-		Schema.UUID, // Record ID
-		Schema.Struct({
-			target_object: Schema.Literal("workspaces"),
-			target_record_id: Schema.UUID,
-		}),
-		Schema.Struct({
-			workspace_id: Schema.Array(Schema.Struct({ value: Schema.String })),
-			target_object: Schema.Literal("workspaces"),
-		}),
-	),
-	output: ApiSingleValue(
-		Schema.Struct({
-			...BaseAttribute.fields,
-			attribute_type: Schema.Literal("record-reference"),
-			target_object: Schema.Literal("workspaces"),
-			target_record_id: Schema.UUID,
-		}),
-	),
-} satisfies AttributeDef
-
-/**
- * # Record references
- *
- * **Relationships and one-way links between records**
- *
- * Record reference attributes allow you to point to other records of the same or different objects. They enable creating relationships between records, such as linking a person to a company or a deal to associated people.
- *
- * This is the multi-select variant of the record reference attribute.
- *
- * @see https://docs.attio.com/docs/attribute-types/attribute-types-record-reference
- */
-export const RecordReferences = {
-	input: Schema.Union(
-		Schema.UUID,
-		Schema.Array(Schema.UUID),
-		Schema.Array(
-			Schema.Struct({
-				target_object: Schema.String,
-				target_record_id: Schema.UUID,
-			}),
-		),
-	),
-	output: Schema.Array(
-		Schema.Struct({
-			...BaseAttribute.fields,
-			attribute_type: Schema.Literal("record-reference"),
-			target_object: Schema.String,
-			target_record_id: Schema.UUID,
-		}),
-	),
-} satisfies AttributeDef
-
-/**
- * # Person record references
- *
- * **References to person records**
- *
- * Multi-select variant of person record reference.
- * Supports writing with email addresses as a shorthand.
- *
- * @see https://docs.attio.com/docs/attribute-types/attribute-types-record-reference
- */
-export const PersonRecordReferences = {
-	input: Schema.Union(
-		Schema.String, // Single email string
-		Schema.Array(Schema.String), // Array of email strings
-		Schema.UUID,
-		Schema.Array(Schema.UUID),
-		Schema.Array(
-			Schema.Struct({
-				target_object: Schema.Literal("people"),
-				target_record_id: Schema.UUID,
-			}),
-		),
-		Schema.Array(
-			Schema.Struct({
-				email_addresses: Schema.Array(
-					Schema.Struct({ email_address: Schema.String }),
-				),
-				target_object: Schema.Literal("people"),
-			}),
-		),
-	),
-	output: Schema.Array(
-		Schema.Struct({
-			...BaseAttribute.fields,
-			attribute_type: Schema.Literal("record-reference"),
-			target_object: Schema.Literal("people"),
-			target_record_id: Schema.UUID,
-		}),
-	),
-} satisfies AttributeDef
-
-/**
- * # User record references
- *
- * **References to user records**
- *
- * Multi-select variant of user record reference.
- * Supports writing with user_id as a shorthand.
- *
- * @see https://docs.attio.com/docs/attribute-types/attribute-types-record-reference
- */
-export const UserRecordReferences = {
-	input: Schema.Union(
-		Schema.String, // Single user ID string
-		Schema.Array(Schema.String), // Array of user ID strings
-		Schema.UUID,
-		Schema.Array(Schema.UUID),
-		Schema.Array(
-			Schema.Struct({
-				target_object: Schema.Literal("users"),
-				target_record_id: Schema.UUID,
-			}),
-		),
-		Schema.Array(
-			Schema.Struct({
-				user_id: Schema.Array(Schema.Struct({ value: Schema.String })),
-				target_object: Schema.Literal("users"),
-			}),
-		),
-	),
-	output: Schema.Array(
-		Schema.Struct({
-			...BaseAttribute.fields,
-			attribute_type: Schema.Literal("record-reference"),
-			target_object: Schema.Literal("users"),
-			target_record_id: Schema.UUID,
-		}),
-	),
-} satisfies AttributeDef
-
-/**
- * # Workspace record references
- *
- * **References to workspace records**
- *
- * Multi-select variant of workspace record reference.
- * Supports writing with workspace_id as a shorthand.
- *
- * @see https://docs.attio.com/docs/attribute-types/attribute-types-record-reference
- */
-export const WorkspaceRecordReferences = {
-	input: Schema.Union(
-		Schema.String, // Single workspace ID string
-		Schema.Array(Schema.String), // Array of workspace ID strings
-		Schema.UUID,
-		Schema.Array(Schema.UUID),
-		Schema.Array(
+export const WorkspaceRecordReference = makeAttribute(
+	{
+		input: Schema.Union(
+			Schema.String, // Workspace ID string
+			Schema.UUID, // Record ID
 			Schema.Struct({
 				target_object: Schema.Literal("workspaces"),
 				target_record_id: Schema.UUID,
 			}),
-		),
-		Schema.Array(
 			Schema.Struct({
 				workspace_id: Schema.Array(Schema.Struct({ value: Schema.String })),
 				target_object: Schema.Literal("workspaces"),
 			}),
 		),
-	),
-	output: Schema.Array(
-		Schema.Struct({
-			...BaseAttribute.fields,
+		output: Schema.Struct({
 			attribute_type: Schema.Literal("record-reference"),
 			target_object: Schema.Literal("workspaces"),
 			target_record_id: Schema.UUID,
 		}),
-	),
-} satisfies AttributeDef
+	},
+	{ multiple: true },
+)
 
 /**
  * # Select
@@ -836,17 +596,16 @@ export const WorkspaceRecordReferences = {
  *
  * @see https://docs.attio.com/docs/attribute-types/attribute-types-select
  */
-export const Select = {
-	input: Schema.Union(
-		Schema.String, // Option title
-		Schema.UUID, // Option ID
-		Schema.Struct({
-			option: Schema.Union(Schema.String, Schema.UUID),
-		}),
-	),
-	output: ApiSingleValue(
-		Schema.Struct({
-			...BaseAttribute.fields,
+export const Select = makeAttribute(
+	{
+		input: Schema.Union(
+			Schema.String, // Option title
+			Schema.UUID, // Option ID
+			Schema.Struct({
+				option: Schema.Union(Schema.String, Schema.UUID),
+			}),
+		),
+		output: Schema.Struct({
 			attribute_type: Schema.Literal("select"),
 			option: Schema.Struct({
 				id: Schema.UUID,
@@ -854,8 +613,9 @@ export const Select = {
 				is_archived: Schema.Boolean,
 			}),
 		}),
-	),
-} satisfies AttributeDef
+	},
+	{ multiple: true },
+)
 
 /**
  * Helper to create a Select field with predefined options.
@@ -864,97 +624,21 @@ export const Select = {
  * @example
  * const priority = SelectWith("low", "medium", "high")
  */
-export const SelectWith = (...options: string[]): AttributeDef => ({
-	input: Schema.Literal(...options),
-	output: ApiSingleValue(
-		Schema.Struct({
-			...BaseAttribute.fields,
-			attribute_type: Schema.Literal("select"),
-			option: Schema.Struct({
-				id: Schema.UUID,
-				title: Schema.String,
-				is_archived: Schema.Boolean,
-			}),
-		}),
-	),
-})
-
-/**
- * # Multi-select
- *
- * **Multiple options from a predefined list**
- *
- * Select attributes are a constrained input type, where the user must pick from a predefined list.
- *
- * Company has several select attributes (they are mostly enriched attributes): `categories`, `estimated_arr_usd` and `employee_range`. `strongest_connection_strength` is also available on both person and company.
- *
- * Attio provides a separate API for managing the select options available.
- *
- * Select attributes may be either single-select or multi-select. In the API, these two variants are represented using the same underlying type, `select`. However, in web and mobile clients, users will see these attributes as two separate types: select and multi-select.
- *
- * Please note that select attributes cannot be configured to be unique.
- *
- * @see https://docs.attio.com/docs/attribute-types/attribute-types-select
- */
-export const MultiSelect = {
-	input: Schema.Union(
-		Schema.String, // Single option title
-		Schema.Array(Schema.String), // Array of option titles
-		Schema.UUID, // Single option ID
-		Schema.Array(Schema.UUID), // Array of option IDs
-		Schema.Array(
-			Schema.Struct({
-				option: Schema.Union(Schema.String, Schema.UUID),
-			}),
-		),
-	),
-	output: Schema.Array(
-		Schema.Struct({
-			...BaseAttribute.fields,
-			attribute_type: Schema.Literal("select"),
-			option: Schema.Struct({
-				id: Schema.Struct({
-					workspace_id: Schema.UUID,
-					object_id: Schema.UUID,
-					attribute_id: Schema.UUID,
-					option_id: Schema.UUID,
+export const SelectWith = (...options: string[]) =>
+	makeAttribute(
+		{
+			input: Schema.Literal(...options),
+			output: Schema.Struct({
+				attribute_type: Schema.Literal("select"),
+				option: Schema.Struct({
+					id: Schema.UUID,
+					title: Schema.String,
+					is_archived: Schema.Boolean,
 				}),
-				title: Schema.String,
-				is_archived: Schema.Boolean,
 			}),
-		}),
-	),
-} satisfies AttributeDef
-
-/**
- * Helper to create a MultiSelect field with predefined options.
- * This constrains the input to only accept specific string literals.
- *
- * @example
- * const tags = MultiSelectWith("urgent", "important", "review", "follow-up")
- */
-export const MultiSelectWith = (...options: string[]): AttributeDef => ({
-	input: Schema.Union(
-		Schema.Literal(...options),
-		Schema.Array(Schema.Literal(...options)),
-	),
-	output: Schema.Array(
-		Schema.Struct({
-			...BaseAttribute.fields,
-			attribute_type: Schema.Literal("select"),
-			option: Schema.Struct({
-				id: Schema.Struct({
-					workspace_id: Schema.UUID,
-					object_id: Schema.UUID,
-					attribute_id: Schema.UUID,
-					option_id: Schema.UUID,
-				}),
-				title: Schema.String,
-				is_archived: Schema.Boolean,
-			}),
-		}),
-	),
-})
+		},
+		{ multiple: true },
+	)
 
 /**
  * # Status
@@ -971,29 +655,26 @@ export const MultiSelectWith = (...options: string[]): AttributeDef => ({
  *
  * @see https://docs.attio.com/docs/attribute-types/attribute-types-status
  */
-export const Status = {
+export const Status = makeAttribute({
 	input: Schema.Union(
 		Schema.String,
 		Schema.Struct({
 			status: Schema.Union(Schema.String, Schema.UUID),
 		}),
 	),
-	output: ApiSingleValue(
-		Schema.Struct({
-			...BaseAttribute.fields,
-			attribute_type: Schema.Literal("status"),
-			status: Schema.Struct({
-				id: Schema.Struct({
-					workspace_id: Schema.UUID,
-					object_id: Schema.UUID,
-					attribute_id: Schema.UUID,
-					status_id: Schema.UUID,
-				}),
-				title: Schema.String,
+	output: Schema.Struct({
+		attribute_type: Schema.Literal("status"),
+		status: Schema.Struct({
+			id: Schema.Struct({
+				workspace_id: Schema.UUID,
+				object_id: Schema.UUID,
+				attribute_id: Schema.UUID,
+				status_id: Schema.UUID,
 			}),
+			title: Schema.String,
 		}),
-	),
-} satisfies AttributeDef
+	}),
+})
 
 /**
  * # Text
@@ -1008,23 +689,18 @@ export const Status = {
  *
  * @see https://docs.attio.com/docs/attribute-types/attribute-types-text
  */
-export const Text = {
+export const Text = makeAttribute({
 	input: Schema.Union(
 		Schema.String,
-		Schema.Array(
-			Schema.Struct({
-				value: Schema.String,
-			}),
-		).pipe(Schema.maxItems(1)),
-	),
-	output: ApiSingleValue(
 		Schema.Struct({
-			...BaseAttribute.fields,
-			attribute_type: Schema.Literal("text"),
 			value: Schema.String,
 		}),
 	),
-} satisfies AttributeDef
+	output: Schema.Struct({
+		attribute_type: Schema.Literal("text"),
+		value: Schema.String,
+	}),
+})
 
 /**
  * # Timestamp
@@ -1039,20 +715,15 @@ export const Text = {
  *
  * @see https://docs.attio.com/docs/attribute-types/attribute-types-timestamp
  */
-export const Timestamp = {
+export const Timestamp = makeAttribute({
 	input: Schema.Union(
 		DateTimeISOString,
-		Schema.Array(
-			Schema.Struct({
-				value: DateTimeISOString,
-			}),
-		).pipe(Schema.maxItems(1)),
-	),
-	output: ApiSingleValue(
 		Schema.Struct({
-			...BaseAttribute.fields,
-			attribute_type: Schema.Literal("timestamp"),
-			value: Schema.DateTimeUtc,
+			value: DateTimeISOString,
 		}),
 	),
-} satisfies AttributeDef
+	output: Schema.Struct({
+		attribute_type: Schema.Literal("timestamp"),
+		value: Schema.DateTimeUtc,
+	}),
+})

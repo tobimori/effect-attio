@@ -247,7 +247,12 @@ export const AttioClient =
 													offset?: number
 												},
 											) =>
-												records.listAttributeValues(resource, id, attribute, params),
+												records.listAttributeValues(
+													resource,
+													id,
+													attribute,
+													params,
+												),
 
 											listEntries: (
 												id: string,

@@ -15,19 +15,23 @@ import { OptionalAttribute } from "./helpers.js"
  * @see https://docs.attio.com/docs/standard-objects/standard-objects-companies
  */
 export const companies = {
-	domains: Attributes.Domains,
+	domains: Attributes.Domain.Multiple,
 	name: Attributes.Text,
 	description: Attributes.Text,
-	team: Attributes.PersonRecordReferences,
-	categories: Attributes.MultiSelect,
+	team: Attributes.PersonRecordReference.Multiple,
+	categories: Attributes.Select.Multiple,
 	primary_location: Attributes.Location,
 	angellist: Attributes.Text,
 	facebook: Attributes.Text,
 	instagram: Attributes.Text,
 	linkedin: Attributes.Text,
 	twitter: Attributes.Text,
-	associated_deals: OptionalAttribute(Attributes.RecordReferences),
-	associated_workspaces: OptionalAttribute(Attributes.WorkspaceRecordReferences),
+	associated_deals: OptionalAttribute(
+		Attributes.DealRecordReference.Multiple as any,
+	), // TODO: fix
+	associated_users: OptionalAttribute(
+		Attributes.UserRecordReference.Multiple as any,
+	), // TODO: fix
 }
 
 /**
@@ -42,20 +46,24 @@ export const companies = {
  * @see https://docs.attio.com/docs/standard-objects/standard-objects-people
  */
 export const people = {
-	email_addresses: Attributes.EmailAddresses,
+	email_addresses: Attributes.EmailAddress.Multiple,
 	name: Attributes.PersonalName,
 	company: Attributes.CompanyRecordReference,
 	description: Attributes.Text,
 	job_title: Attributes.Text,
-	phone_numbers: Attributes.PhoneNumbers,
+	phone_numbers: Attributes.PhoneNumber.Multiple,
 	primary_location: Attributes.Location,
 	angellist: Attributes.Text,
 	facebook: Attributes.Text,
 	instagram: Attributes.Text,
 	linkedin: Attributes.Text,
 	twitter: Attributes.Text,
-	associated_deals: OptionalAttribute(Attributes.RecordReferences),
-	associated_users: OptionalAttribute(Attributes.UserRecordReferences),
+	associated_deals: OptionalAttribute(
+		Attributes.RecordReference.Multiple as any,
+	), // TODO: fix
+	associated_users: OptionalAttribute(
+		Attributes.UserRecordReference.Multiple as any,
+	), // TODO: fix
 }
 
 /**
@@ -72,7 +80,7 @@ export const deals = {
 	state: Attributes.Status,
 	owner: Attributes.ActorReference,
 	value: Attributes.Currency,
-	associated_people: Attributes.PersonRecordReferences,
+	associated_people: Attributes.PersonRecordReference.Multiple,
 	associated_company: Attributes.CompanyRecordReference,
 }
 
@@ -108,7 +116,7 @@ export const users = {
 export const workspaces = {
 	workspace_id: Attributes.Text,
 	name: Attributes.Text,
-	users: Attributes.UserRecordReferences,
+	users: Attributes.UserRecordReference.Multiple,
 	company: Attributes.CompanyRecordReference,
 	avatar_Url: Attributes.Text,
 }

@@ -1,12 +1,5 @@
 import * as ParseResult from "effect/ParseResult"
 import * as Schema from "effect/Schema"
-import { Actor } from "../shared/schemas.js"
-
-export const BaseAttribute = Schema.Struct({
-	active_from: Schema.String,
-	active_until: Schema.NullOr(Schema.String),
-	created_by_actor: Actor,
-})
 
 export const CurrencyCode = Schema.Literal(
 	"ARS",

@@ -31,6 +31,7 @@ const genericTag =
 		return Object.assign(tag, members(tag as any)) as any
 	}
 
+// TODO: cleanup
 export interface ListParams {
 	limit?: number
 	offset?: number
@@ -38,6 +39,7 @@ export interface ListParams {
 }
 
 // Record structure returned by Attio API
+// TODO: clean up (duplicated as runtime schema in records service)
 export interface AttioRecord<T> {
 	id: {
 		workspace_id: string

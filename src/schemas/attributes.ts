@@ -96,7 +96,7 @@ export const Currency = makeAttribute({
 	),
 	output: Schema.Struct({
 		attribute_type: Schema.Literal("currency"),
-		currency_value: Schema.NumberFromString,
+		currency_value: Schema.Number,
 		currency_code: CurrencyCode,
 	}),
 })

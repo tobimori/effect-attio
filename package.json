@@ -1,10 +1,41 @@
 {
 	"name": "effect-attio",
-	"description": "Attio API SDK for Effect",
 	"version": "0.1.0",
-	"author": "Tobias Möritz <tobias@moeritz.io>",
-	"license": "MIT",
 	"type": "module",
+	"license": "MIT",
+	"description": "Attio API SDK for Effect",
+	"author": "Tobias Möritz <tobias@moeritz.io>",
+	"homepage": "https://github.com/tobimori/effect-attio",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/tobimori/effect-attio.git"
+	},
+	"bugs": {
+		"url": "https://github.com/tobimori/effect-attio/issues"
+	},
+	"keywords": [
+		"effect",
+		"attio",
+		"api",
+		"sdk",
+		"typescript"
+	],
+	"publishConfig": {
+		"access": "public",
+		"provenance": true,
+		"directory": "dist"
+	},
+	"exports": {
+		"./package.json": "./package.json",
+		".": "./src/index.ts",
+		"./*": "./src/*.ts"
+	},
+	"scripts": {
+		"build": "tsc -b tsconfig.build.json && cp -r src dist/",
+		"check": "tsc -b tsconfig.json",
+		"clean": "rm -rf dist .tsbuildinfo",
+		"prepublishOnly": "pnpm clean && pnpm build"
+	},
 	"peerDependencies": {
 		"@effect/platform": "^0.90.2",
 		"effect": "^3.17.7"

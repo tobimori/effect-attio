@@ -53,7 +53,10 @@ export interface AttioRecord<T> {
 
 export const AttioClient =
 	<Self>() =>
-	<L extends string, T extends Record<string, ObjectConfig> = {}>(
+	<
+		L extends string,
+		T extends Record<string, ObjectConfig> = { [k: string]: ObjectConfig },
+	>(
 		tag: L,
 		config: ObjectsConfig<T> = {},
 	) =>

@@ -133,6 +133,30 @@ export const AttioClient =
 						never
 					>
 					delete: (id: string) => Effect.Effect<void, never>
+					listAttributeValues: (
+						id: string,
+						attribute: string,
+						params?: {
+							show_historic?: boolean
+							limit?: number
+							offset?: number
+						},
+					) => Effect.Effect<Array<unknown>, never>
+					listEntries: (
+						id: string,
+						params?: {
+							limit?: number
+							offset?: number
+						},
+					) => Effect.Effect<
+						Array<{
+							list_id: string
+							list_api_slug: string
+							entry_id: string
+							created_at: string
+						}>,
+						never
+					>
 				}
 			} & {
 				comments: AttioComments
@@ -213,6 +237,25 @@ export const AttioClient =
 												records.patch(resource, { input, output }, id, data),
 
 											delete: (id: string) => records.delete(resource, id),
+
+											listAttributeValues: (
+												id: string,
+												attribute: string,
+												params?: {
+													show_historic?: boolean
+													limit?: number
+													offset?: number
+												},
+											) =>
+												records.listAttributeValues(resource, id, attribute, params),
+
+											listEntries: (
+												id: string,
+												params?: {
+													limit?: number
+													offset?: number
+												},
+											) => records.listEntries(resource, id, params),
 										}
 									},
 								},

@@ -22,6 +22,8 @@ export class AttioRecords extends Effect.Service<AttioRecords>()(
 				 * Lists people, company or other records, with the option to filter and sort results.
 				 *
 				 * Required scopes: `record_permission:read`, `object_configuration:read`
+				 *
+				 * @see https://docs.attio.com/rest-api/endpoint-reference/records/list-records
 				 */
 				list: Effect.fn(`record.list`)(function* <
 					_I extends Schema.Schema.Any,
@@ -76,6 +78,8 @@ export class AttioRecords extends Effect.Service<AttioRecords>()(
 				 * If no record is found, a new record will be created instead.
 				 *
 				 * Required scopes: `record_permission:read-write`, `object_configuration:read`
+				 *
+				 * @see https://docs.attio.com/rest-api/endpoint-reference/records/create-or-update-a-record
 				 */
 				assert: Effect.fn(`record.assert`)(function* <
 					I extends Schema.Schema.Any,
@@ -114,9 +118,13 @@ export class AttioRecords extends Effect.Service<AttioRecords>()(
 				}),
 
 				/**
+				 * # Get a record
+				 *
 				 * Gets a single person, company or other record by its `record_id`.
 				 *
 				 * Required scopes: `record_permission:read`, `object_configuration:read`
+				 *
+				 * @see https://docs.attio.com/rest-api/endpoint-reference/records/get-a-record
 				 */
 				get: Effect.fn(`record.get`)(function* <
 					_I extends Schema.Schema.Any,
@@ -141,10 +149,14 @@ export class AttioRecords extends Effect.Service<AttioRecords>()(
 				}),
 
 				/**
-				 * Creates a new person, company or other record.
-				 * This endpoint will throw on conflicts of unique attributes.
+				 * # Create a record
+				 *
+				 * Creates a new person, company or other record. This endpoint will throw on conflicts of unique attributes.
+				 * If you would prefer to update records on conflicts, please use the assert record endpoint instead.
 				 *
 				 * Required scopes: `record_permission:read-write`, `object_configuration:read`
+				 *
+				 * @see https://docs.attio.com/rest-api/endpoint-reference/records/create-a-record
 				 */
 				create: Effect.fn(`record.create`)(function* <
 					I extends Schema.Schema.Any,
@@ -177,11 +189,15 @@ export class AttioRecords extends Effect.Service<AttioRecords>()(
 				}),
 
 				/**
-				 * Update people, companies, and other records by record_id.
-				 * Multiselect attributes will be overwritten/removed.
-				 * Use the `patch` method to append multiselect values without removing existing ones.
+				 * # Update a record (overwrite multiselect values)
+				 *
+				 * Use this endpoint to update people, companies, and other records by `record_id`.
+				 * If the update payload includes multiselect attributes, the values supplied will overwrite/remove the list of values that already exist (if any).
+				 * Use the `patch` endpoint to append multiselect values without removing those that already exist.
 				 *
 				 * Required scopes: `record_permission:read-write`, `object_configuration:read`
+				 *
+				 * @see https://docs.attio.com/rest-api/endpoint-reference/records/update-a-record-overwrite-multiselect-values
 				 */
 				update: Effect.fn(`record.update`)(function* <
 					I extends Schema.Schema.Any,
@@ -196,7 +212,11 @@ export class AttioRecords extends Effect.Service<AttioRecords>()(
 						`/v2/objects/${object}/records/${recordId}`,
 					).pipe(
 						HttpClientRequest.bodyJson({
-							data: { values: yield* Schema.encode(Schema.partial(schema.input))(data) },
+							data: {
+								values: yield* Schema.encode(Schema.partial(schema.input))(
+									data,
+								),
+							},
 						}),
 						Effect.flatMap(http.execute),
 						Effect.flatMap(
@@ -216,11 +236,15 @@ export class AttioRecords extends Effect.Service<AttioRecords>()(
 				}),
 
 				/**
-				 * Update people, companies, and other records by record_id.
-				 * Multiselect attributes will be appended without removing existing values.
-				 * Use the `update` method to overwrite multiselect values.
+				 * # Update a record (append multiselect values)
+				 *
+				 * Use this endpoint to update people, companies, and other records by `record_id`.
+				 * If the update payload includes multiselect attributes, the values supplied will be created and prepended to the list of values that already exist (if any).
+				 * Use the `update` endpoint to overwrite or remove multiselect attribute values.
 				 *
 				 * Required scopes: `record_permission:read-write`, `object_configuration:read`
+				 *
+				 * @see https://docs.attio.com/rest-api/endpoint-reference/records/update-a-record-append-multiselect-values
 				 */
 				patch: Effect.fn(`record.patch`)(function* <
 					I extends Schema.Schema.Any,
@@ -235,7 +259,11 @@ export class AttioRecords extends Effect.Service<AttioRecords>()(
 						`/v2/objects/${object}/records/${recordId}`,
 					).pipe(
 						HttpClientRequest.bodyJson({
-							data: { values: yield* Schema.encode(Schema.partial(schema.input))(data) },
+							data: {
+								values: yield* Schema.encode(Schema.partial(schema.input))(
+									data,
+								),
+							},
 						}),
 						Effect.flatMap(http.execute),
 						Effect.flatMap(
@@ -255,15 +283,102 @@ export class AttioRecords extends Effect.Service<AttioRecords>()(
 				}),
 
 				/**
+				 * # Delete a record
+				 *
 				 * Deletes a single record (e.g. a company or person) by ID.
 				 *
 				 * Required scopes: `object_configuration:read`, `record_permission:read-write`
+				 *
+				 * @see https://docs.attio.com/rest-api/endpoint-reference/records/delete-a-record
 				 */
 				delete: Effect.fn(`record.delete`)(function* (
 					object: string,
 					recordId: string,
 				) {
 					yield* http.del(`/v2/objects/${object}/records/${recordId}`)
+				}),
+
+				/**
+				 * # List record attribute values
+				 *
+				 * Gets all values for a given attribute on a record. Historic values can be queried using the show_historic query param.
+				 * Historic values cannot be queried on COMINT (Communication Intelligence) or enriched attributes and the endpoint will return a 400 error if this is attempted.
+				 * Historic values are sorted from oldest to newest (by active_from).
+				 * Some attributes are subject to billing status and will return an empty array of values if the workspace being queried does not have the required billing flag enabled.
+				 *
+				 * Required scopes: `record_permission:read`, `object_configuration:read`
+				 *
+				 * @see https://docs.attio.com/rest-api/endpoint-reference/records/list-record-attribute-values
+				 */
+				listAttributeValues: Effect.fn(`record.listAttributeValues`)(function* (
+					object: string,
+					recordId: string,
+					attribute: string,
+					params?: {
+						show_historic?: boolean
+						limit?: number
+						offset?: number
+					},
+				) {
+					return yield* HttpClientRequest.get(
+						`/v2/objects/${object}/records/${recordId}/attributes/${attribute}/values`,
+					).pipe(
+						HttpClientRequest.setUrlParams({
+							show_historic: params?.show_historic?.toString(),
+							limit: params?.limit?.toString(),
+							offset: params?.offset?.toString(),
+						}),
+						http.execute,
+						Effect.flatMap(
+							HttpClientResponse.schemaBodyJson(
+								DataStruct(Schema.Array(Schema.Unknown)),
+							),
+						),
+						Effect.map((result) => result.data),
+					)
+				}),
+
+				/**
+				 * # List record entries
+				 *
+				 * List all entries, across all lists, for which this record is the parent.
+				 *
+				 * Required scopes: `record_permission:read`, `object_configuration:read`, `list_entry:read`
+				 *
+				 * @see https://docs.attio.com/rest-api/endpoint-reference/records/list-record-entries
+				 */
+				listEntries: Effect.fn(`record.listEntries`)(function* (
+					object: string,
+					recordId: string,
+					params?: {
+						limit?: number
+						offset?: number
+					},
+				) {
+					return yield* HttpClientRequest.get(
+						`/v2/objects/${object}/records/${recordId}/entries`,
+					).pipe(
+						HttpClientRequest.setUrlParams({
+							limit: params?.limit?.toString(),
+							offset: params?.offset?.toString(),
+						}),
+						http.execute,
+						Effect.flatMap(
+							HttpClientResponse.schemaBodyJson(
+								DataStruct(
+									Schema.Array(
+										Schema.Struct({
+											list_id: Schema.UUID,
+											list_api_slug: Schema.String,
+											entry_id: Schema.UUID,
+											created_at: Schema.String,
+										}),
+									),
+								),
+							),
+						),
+						Effect.map((result) => result.data),
+					)
 				}),
 			}
 		}),

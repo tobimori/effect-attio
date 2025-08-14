@@ -585,7 +585,7 @@ export const CompanyRecordReference = {
 } satisfies AttributeDef
 
 /**
- * # Person record reference  
+ * # Person record reference
  *
  * **Reference to a person record**
  *
@@ -603,7 +603,9 @@ export const PersonRecordReference = {
 			target_record_id: Schema.UUID,
 		}),
 		Schema.Struct({
-			email_addresses: Schema.Array(Schema.Struct({ email_address: Schema.String })),
+			email_addresses: Schema.Array(
+				Schema.Struct({ email_address: Schema.String }),
+			),
 			target_object: Schema.Literal("people"),
 		}),
 	),
@@ -706,7 +708,9 @@ export const PersonRecordReferences = {
 		),
 		Schema.Array(
 			Schema.Struct({
-				email_addresses: Schema.Array(Schema.Struct({ email_address: Schema.String })),
+				email_addresses: Schema.Array(
+					Schema.Struct({ email_address: Schema.String }),
+				),
 				target_object: Schema.Literal("people"),
 			}),
 		),
@@ -799,11 +803,29 @@ export const WorkspaceRecordReferences = {
 	),
 } satisfies AttributeDef
 
-export const Select: AttributeDef = {
+/**
+ * # Select
+ *
+ * **An option from a predefined list**
+ *
+ * Select attributes are a constrained input type, where the user must pick from a predefined list.
+ *
+ * Company has several select attributes (they are mostly enriched attributes): `categories`, `estimated_arr_usd` and `employee_range`. `strongest_connection_strength` is also available on both person and company.
+ *
+ * Attio provides a separate API for managing the select options available.
+ *
+ * Select attributes may be either single-select or multi-select. In the API, these two variants are represented using the same underlying type, `select`. However, in web and mobile clients, users will see these attributes as two separate types: select and multi-select.
+ *
+ * Please note that select attributes cannot be configured to be unique.
+ *
+ * @see https://docs.attio.com/docs/attribute-types/attribute-types-select
+ */
+export const Select = {
 	input: Schema.Union(
+		Schema.String, // Option title
 		Schema.UUID, // Option ID
 		Schema.Struct({
-			option_id: Schema.UUID,
+			option: Schema.Union(Schema.String, Schema.UUID),
 		}),
 	),
 	output: ApiSingleValue(
@@ -811,20 +833,21 @@ export const Select: AttributeDef = {
 			...BaseAttribute.fields,
 			attribute_type: Schema.Literal("select"),
 			option: Schema.Struct({
-				id: Schema.Union(
-					Schema.UUID,
-					Schema.Struct({
-						option_id: Schema.UUID,
-					}),
-				),
+				id: Schema.UUID,
 				title: Schema.String,
 				is_archived: Schema.Boolean,
 			}),
 		}),
 	),
-}
+} satisfies AttributeDef
 
-// Helper to create Select field with predefined options
+/**
+ * Helper to create a Select field with predefined options.
+ * This constrains the input to only accept specific string literals.
+ *
+ * @example
+ * const priority = SelectWith("low", "medium", "high")
+ */
 export const SelectWith = (...options: string[]): AttributeDef => ({
 	input: Schema.Literal(...options),
 	output: ApiSingleValue(
@@ -832,12 +855,7 @@ export const SelectWith = (...options: string[]): AttributeDef => ({
 			...BaseAttribute.fields,
 			attribute_type: Schema.Literal("select"),
 			option: Schema.Struct({
-				id: Schema.Union(
-					Schema.UUID,
-					Schema.Struct({
-						option_id: Schema.UUID,
-					}),
-				),
+				id: Schema.UUID,
 				title: Schema.String,
 				is_archived: Schema.Boolean,
 			}),
@@ -845,13 +863,32 @@ export const SelectWith = (...options: string[]): AttributeDef => ({
 	),
 })
 
+/**
+ * # Multi-select
+ *
+ * **Multiple options from a predefined list**
+ *
+ * Select attributes are a constrained input type, where the user must pick from a predefined list.
+ *
+ * Company has several select attributes (they are mostly enriched attributes): `categories`, `estimated_arr_usd` and `employee_range`. `strongest_connection_strength` is also available on both person and company.
+ *
+ * Attio provides a separate API for managing the select options available.
+ *
+ * Select attributes may be either single-select or multi-select. In the API, these two variants are represented using the same underlying type, `select`. However, in web and mobile clients, users will see these attributes as two separate types: select and multi-select.
+ *
+ * Please note that select attributes cannot be configured to be unique.
+ *
+ * @see https://docs.attio.com/docs/attribute-types/attribute-types-select
+ */
 export const MultiSelect = {
 	input: Schema.Union(
-		Schema.UUID,
-		Schema.Array(Schema.UUID),
+		Schema.String, // Single option title
+		Schema.Array(Schema.String), // Array of option titles
+		Schema.UUID, // Single option ID
+		Schema.Array(Schema.UUID), // Array of option IDs
 		Schema.Array(
 			Schema.Struct({
-				option_id: Schema.UUID,
+				option: Schema.Union(Schema.String, Schema.UUID),
 			}),
 		),
 	),
@@ -860,18 +897,38 @@ export const MultiSelect = {
 			...BaseAttribute.fields,
 			attribute_type: Schema.Literal("select"),
 			option: Schema.Struct({
-				id: Schema.Union(
-					Schema.UUID,
-					Schema.Struct({
-						option_id: Schema.UUID,
-					}),
-				),
+				id: Schema.UUID,
 				title: Schema.String,
 				is_archived: Schema.Boolean,
 			}),
 		}),
 	),
 } satisfies AttributeDef
+
+/**
+ * Helper to create a MultiSelect field with predefined options.
+ * This constrains the input to only accept specific string literals.
+ *
+ * @example
+ * const tags = MultiSelectWith("urgent", "important", "review", "follow-up")
+ */
+export const MultiSelectWith = (...options: string[]): AttributeDef => ({
+	input: Schema.Union(
+		Schema.Literal(...options),
+		Schema.Array(Schema.Literal(...options)),
+	),
+	output: Schema.Array(
+		Schema.Struct({
+			...BaseAttribute.fields,
+			attribute_type: Schema.Literal("select"),
+			option: Schema.Struct({
+				id: Schema.UUID,
+				title: Schema.String,
+				is_archived: Schema.Boolean,
+			}),
+		}),
+	),
+})
 
 /**
  * # Status

@@ -1,4 +1,8 @@
-import { Config, Context, Effect, Layer, Schema } from "effect"
+import * as Config from "effect/Config"
+import * as Context from "effect/Context"
+import * as Effect from "effect/Effect"
+import * as Layer from "effect/Layer"
+import * as Schema from "effect/Schema"
 import {
 	type MergedObjectFields,
 	type ObjectConfig,
@@ -43,6 +47,33 @@ export const AttioClient =
 			Self,
 			{
 				[K in keyof MergedObjectFields<T>]: {
+					list: (
+						params?: ListParams,
+					) => Effect.Effect<
+						Array<
+							Schema.Schema.Type<
+								ReturnType<
+									typeof createSchemas<MergedObjectFields<T>[K]>
+								>["output"]
+							>
+						>,
+						never
+					>
+					assert: (
+						matchingAttribute: string,
+						data: Schema.Schema.Type<
+							ReturnType<
+								typeof createSchemas<MergedObjectFields<T>[K]>
+							>["input"]
+						>,
+					) => Effect.Effect<
+						Schema.Schema.Type<
+							ReturnType<
+								typeof createSchemas<MergedObjectFields<T>[K]>
+							>["output"]
+						>,
+						never
+					>
 					create: (
 						data: Schema.Schema.Type<
 							ReturnType<
@@ -84,19 +115,24 @@ export const AttioClient =
 						>,
 						never
 					>
-					delete: (id: string) => Effect.Effect<void, never>
-					list: (params?: ListParams) => Effect.Effect<
-						{
-							data: Array<
-								Schema.Schema.Type<
-									ReturnType<
-										typeof createSchemas<MergedObjectFields<T>[K]>
-									>["output"]
-								>
+					patch: (
+						id: string,
+						data: Partial<
+							Schema.Schema.Type<
+								ReturnType<
+									typeof createSchemas<MergedObjectFields<T>[K]>
+								>["input"]
 							>
-						},
+						>,
+					) => Effect.Effect<
+						Schema.Schema.Type<
+							ReturnType<
+								typeof createSchemas<MergedObjectFields<T>[K]>
+							>["output"]
+						>,
 						never
 					>
+					delete: (id: string) => Effect.Effect<void, never>
 				}
 			} & {
 				comments: AttioComments
@@ -143,44 +179,40 @@ export const AttioClient =
 										if (resource in target) {
 											return target[resource]
 										}
-
 										// Check if it's a configured object
 										if (!(resource in schemas)) {
 											throw new Error(`Unknown resource: ${resource}`)
 										}
 
 										const schema = schemas[resource as keyof typeof schemas]
+										const input = schema.input ?? Schema.Any
+										const output = schema.output ?? Schema.Any
 
 										return {
-											create: (data: any) =>
-												records.create(resource, schema, data),
+											list: (params?: ListParams) =>
+												records.list(resource, { input, output }, params),
 
-											get: (id: string) => records.get(resource, schema, id),
-
-											update: Effect.fn(`${resource}.update`)(function* (
-												id: string,
-												data,
-											) {
-												const validated = yield* Schema.decode(schema.input)(
+											assert: (matchingAttribute: string, data: any) =>
+												records.assert(
+													resource,
+													{ input, output },
+													matchingAttribute,
 													data,
-												)
-												// TODO: implement actual HTTP request
-												return { id, ...validated }
-											}),
+												),
 
-											delete: Effect.fn(`${resource}.delete`)(function* (
-												_id: string,
-											) {
-												// TODO: implement actual HTTP request
-												return yield* Effect.void
-											}),
+											create: (data: any) =>
+												records.create(resource, { input, output }, data),
 
-											list: Effect.fn(`${resource}.list`)(function* (
-												_params?: ListParams,
-											) {
-												// TODO: implement actual HTTP request
-												return yield* Effect.succeed({ data: [] })
-											}),
+											get: (id: string) =>
+												records.get(resource, { input, output }, id),
+
+											update: (id: string, data: any) =>
+												records.update(resource, { input, output }, id, data),
+
+											patch: (id: string, data: any) =>
+												records.patch(resource, { input, output }, id, data),
+
+											delete: (id: string) => records.delete(resource, id),
 										}
 									},
 								},

@@ -1,4 +1,6 @@
+import type * as HttpClient from "@effect/platform/HttpClient"
 import * as Config from "effect/Config"
+import type * as ConfigError from "effect/ConfigError"
 import * as Context from "effect/Context"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
@@ -11,6 +13,7 @@ import {
 } from "./config.js"
 import { AttioHttpClient, type AttioHttpClientOptions } from "./http-client.js"
 import type { createSchemas } from "./schemas/helpers.js"
+import type * as Objects from "./schemas/objects.js"
 import { AttioComments } from "./services/comments.js"
 import { AttioMeta } from "./services/meta.js"
 import { AttioNotes } from "./services/notes.js"
@@ -55,7 +58,9 @@ export const AttioClient =
 	<Self>() =>
 	<
 		L extends string,
-		T extends Record<string, ObjectConfig> = { [k: string]: ObjectConfig },
+		T extends Record<string | keyof typeof Objects, ObjectConfig> = {
+			[k: string]: ObjectConfig
+		},
 	>(
 		tag: L,
 		config: ObjectsConfig<T> = {},
@@ -312,7 +317,12 @@ export const AttioClient =
 						Layer.provide(Layer.mergeAll(AttioHttpClient.Default(opts))),
 					)
 			},
-			get layerConfig() {
+			// without this return type, the layer is inferred as Layer.Layer<unknown>
+			get layerConfig(): Layer.Layer<
+				Self,
+				ConfigError.ConfigError,
+				HttpClient.HttpClient
+			> {
 				return Layer.unwrapEffect(
 					Effect.gen(this, function* () {
 						const apiKey = yield* Config.redacted("ATTIO_API_KEY")

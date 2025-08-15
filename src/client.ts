@@ -14,7 +14,6 @@ import {
 } from "./config.js"
 import { AttioHttpClient, type AttioHttpClientOptions } from "./http-client.js"
 import type { createSchemas } from "./schemas/helpers.js"
-import type * as Objects from "./schemas/objects.js"
 import { AttioComments } from "./services/comments.js"
 import { AttioEntries, type GenericAttioEntries } from "./services/entries.js"
 import { AttioLists } from "./services/lists.js"
@@ -52,13 +51,7 @@ export interface AttioRecord<T> {
 
 export const AttioClient =
 	<Self>() =>
-	<
-		Tag extends string,
-		T extends AttioClientSchemas<
-			Record<string | keyof typeof Objects, ObjectConfig>,
-			Record<string, ListConfig>
-		> = AttioClientSchemas,
-	>(
+	<Tag extends string, T extends AttioClientSchemas = AttioClientSchemas>(
 		tag: Tag,
 		config: T = {} as T,
 	) =>

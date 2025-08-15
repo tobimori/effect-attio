@@ -1,5 +1,6 @@
 import type { AttributeDef } from "./schemas/attribute-builder.js"
 import { createSchemas } from "./schemas/helpers.js"
+import type * as Objects from "./schemas/objects.js"
 import * as StandardObjects from "./schemas/objects.js"
 
 // Objects can have fields that are either AttributeDef or have input/output properties (like .Multiple)
@@ -9,8 +10,12 @@ export type ObjectConfig = boolean | Record<string, AttributeLike>
 export type ListConfig = Record<string, AttributeLike>
 
 export type AttioClientSchemas<
-	T extends Record<string, ObjectConfig> = {},
-	L extends Record<string, ListConfig> = {},
+	T extends Record<string | keyof typeof Objects, ObjectConfig> = {
+		[k: string]: ObjectConfig
+	},
+	L extends Record<string, ListConfig> = {
+		[k: string]: ListConfig
+	},
 > = {
 	objects?: T
 	lists?: L
@@ -56,24 +61,21 @@ export function processSchemas<
 	const listSchemas = {} as any
 
 	// process objects
-	if (config.objects) {
-		for (const [name, objectConfig] of Object.entries(config.objects)) {
-			if (objectConfig === false) continue
+	for (const [name, objectConfig] of Object.entries(config.objects ?? [])) {
+		if (objectConfig === false) continue
 
-			const standardFields =
-				StandardObjects[name as keyof typeof StandardObjects]
+		const standardFields = StandardObjects[name as keyof typeof StandardObjects]
 
-			if (standardFields) {
-				if (objectConfig === true) {
-					objectSchemas[name] = createSchemas(standardFields, 'record_id')
-				} else {
-					const mergedFields = { ...standardFields, ...objectConfig }
-					objectSchemas[name] = createSchemas(mergedFields, 'record_id')
-				}
+		if (standardFields) {
+			if (objectConfig === true) {
+				objectSchemas[name] = createSchemas(standardFields, "record_id")
 			} else {
-				if (typeof objectConfig !== "boolean") {
-					objectSchemas[name] = createSchemas(objectConfig, 'record_id')
-				}
+				const mergedFields = { ...standardFields, ...objectConfig }
+				objectSchemas[name] = createSchemas(mergedFields, "record_id")
+			}
+		} else {
+			if (typeof objectConfig !== "boolean") {
+				objectSchemas[name] = createSchemas(objectConfig, "record_id")
 			}
 		}
 	}
@@ -89,15 +91,13 @@ export function processSchemas<
 				continue
 			}
 
-			objectSchemas[name] = createSchemas(fields, 'record_id')
+			objectSchemas[name] = createSchemas(fields, "record_id")
 		}
 	}
 
 	// process lists
-	if (config.lists) {
-		for (const [name, listConfig] of Object.entries(config.lists)) {
-			listSchemas[name] = createSchemas(listConfig, 'entry_id')
-		}
+	for (const [name, listConfig] of Object.entries(config.lists ?? [])) {
+		listSchemas[name] = createSchemas(listConfig, "entry_id")
 	}
 
 	return {

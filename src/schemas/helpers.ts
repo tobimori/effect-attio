@@ -10,22 +10,26 @@ export const OptionalAttribute = <T extends AttributeDef>(field: T) => ({
 	output: Schema.optional(field.output),
 })
 
-const baseObjectAttributes = {
+export const baseObjectAttributes = {
 	created_at: Attributes.Timestamp.ReadOnly,
 	created_by: Attributes.ActorReference.ReadOnly,
 	record_id: Attributes.Text.ReadOnly,
 }
 
-type BaseAttributes = typeof baseObjectAttributes
+export const baseListEntryAttributes = {
+	entry_id: Attributes.Text.ReadOnly,
+	parent_record: Attributes.RecordReference.ReadOnly,
+	created_at: Attributes.Timestamp.ReadOnly,
+	created_by: Attributes.ActorReference.ReadOnly,
+}
 
 type AttributeLike = { input: any; output: any } // TODO: fix
 
-type MergedFields<T extends Record<string, AttributeLike>> = BaseAttributes & T
-
-export function createSchemas<T extends Record<string, AttributeLike>>(
-	fields: T,
-) {
-	const allFields = { ...baseObjectAttributes, ...fields } as MergedFields<T>
+export function createSchemas<
+	T extends Record<string, AttributeLike>,
+	B extends Record<string, AttributeLike>,
+>(fields: T, baseAttributes: B) {
+	const allFields = { ...baseAttributes, ...fields }
 
 	const inputFields = {} as any
 	const outputFields = {} as any
@@ -43,14 +47,16 @@ export function createSchemas<T extends Record<string, AttributeLike>>(
 		}
 	}
 
+	type MergedFields = B & T
+
 	return {
 		input: Schema.Struct(inputFields) as Schema.Struct<{
-			[K in keyof MergedFields<T> as MergedFields<T>[K]["input"] extends Schema.Void 
-				? never 
-				: K]: MergedFields<T>[K]["input"]
+			[K in keyof MergedFields as MergedFields[K]["input"] extends Schema.Void
+				? never
+				: K]: MergedFields[K]["input"]
 		}>,
 		output: Schema.Struct(outputFields) as Schema.Struct<{
-			[K in keyof MergedFields<T>]: MergedFields<T>[K]["output"]
+			[K in keyof MergedFields]: MergedFields[K]["output"]
 		}>,
 		fields: allFields,
 	}

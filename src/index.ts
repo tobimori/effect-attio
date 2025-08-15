@@ -6,6 +6,7 @@ export type { AttributeDef } from "./schemas/attribute-builder.js"
 export * as Attributes from "./schemas/attributes.js"
 
 export { AttioComments } from "./services/comments.js"
+export { AttioEntries } from "./services/entries.js"
 export { AttioLists } from "./services/lists.js"
 export { AttioMeta } from "./services/meta.js"
 export { AttioNotes } from "./services/notes.js"

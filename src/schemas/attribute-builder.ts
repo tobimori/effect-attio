@@ -52,7 +52,7 @@ type BaseAttributeVariations<T extends AttributeDef> = {
 	}
 	ReadOnly: {
 		input: Schema.Void
-		output: ReturnType<typeof ApiSingleValue<T["output"], any, any>>
+		output: ReturnType<typeof ApiSingleValueRequired<T["output"], any, any>>
 	}
 }
 
@@ -67,7 +67,7 @@ type AttributeWithMultiple<T extends AttributeDef> =
 			}
 			ReadOnly: {
 				input: Schema.Void
-				output: Schema.Array$<T["output"]>
+				output: Schema.filter<Schema.Array$<T["output"]>>
 			}
 		}
 	}
@@ -100,7 +100,7 @@ export function makeAttribute<T extends AttributeDef>(
 			},
 			ReadOnly: {
 				input: Schema.Void,
-				output: ApiSingleValue(enrichedOutput),
+				output: ApiSingleValueRequired(enrichedOutput),
 			},
 		},
 	)
@@ -119,7 +119,7 @@ export function makeAttribute<T extends AttributeDef>(
 					},
 					ReadOnly: {
 						input: Schema.Void,
-						output: Schema.Array(enrichedOutput),
+						output: Schema.Array(enrichedOutput).pipe(Schema.minItems(1)),
 					},
 				},
 			),

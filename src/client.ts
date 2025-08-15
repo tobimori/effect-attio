@@ -6,15 +6,22 @@ import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Schema from "effect/Schema"
 import {
+	type AttioClientSchemas,
+	type ListConfig,
 	type MergedObjectFields,
 	type ObjectConfig,
-	type ObjectsConfig,
-	processObjectsConfig,
+	processSchemas,
 } from "./config.js"
 import { AttioHttpClient, type AttioHttpClientOptions } from "./http-client.js"
-import type { createSchemas } from "./schemas/helpers.js"
+import type {
+	baseListEntryAttributes,
+	baseObjectAttributes,
+	createSchemas,
+} from "./schemas/helpers.js"
 import type * as Objects from "./schemas/objects.js"
 import { AttioComments } from "./services/comments.js"
+import { AttioEntries, type GenericAttioEntries } from "./services/entries.js"
+import { AttioLists } from "./services/lists.js"
 import { AttioMeta } from "./services/meta.js"
 import { AttioNotes } from "./services/notes.js"
 import { AttioObjects } from "./services/objects.js"
@@ -34,13 +41,6 @@ const genericTag =
 		return Object.assign(tag, members(tag as any)) as any
 	}
 
-// TODO: cleanup
-export interface ListParams {
-	limit?: number
-	offset?: number
-	sort_by?: string
-}
-
 // Record structure returned by Attio API
 // TODO: clean up (duplicated as runtime schema in records service)
 export interface AttioRecord<T> {
@@ -57,22 +57,43 @@ export interface AttioRecord<T> {
 export const AttioClient =
 	<Self>() =>
 	<
-		L extends string,
+		Tag extends string,
 		T extends Record<string | keyof typeof Objects, ObjectConfig> = {
 			[k: string]: ObjectConfig
 		},
+		L extends Record<string, ListConfig> = {},
 	>(
-		tag: L,
-		config: ObjectsConfig<T> = {},
+		tag: Tag,
+		config: AttioClientSchemas<T, L> = {},
 	) =>
 		genericTag<
 			Self,
 			{
 				[K in keyof MergedObjectFields<T>]: GenericAttioRecords<
-					ReturnType<typeof createSchemas<MergedObjectFields<T>[K]>>["input"],
-					ReturnType<typeof createSchemas<MergedObjectFields<T>[K]>>["output"]
+					ReturnType<
+						typeof createSchemas<
+							MergedObjectFields<T>[K],
+							typeof baseObjectAttributes
+						>
+					>["input"],
+					ReturnType<
+						typeof createSchemas<
+							MergedObjectFields<T>[K],
+							typeof baseObjectAttributes
+						>
+					>["output"]
 				>
 			} & {
+				lists: {
+					[K in keyof L]: GenericAttioEntries<
+						ReturnType<
+							typeof createSchemas<L[K], typeof baseListEntryAttributes>
+						>["input"],
+						ReturnType<
+							typeof createSchemas<L[K], typeof baseListEntryAttributes>
+						>["output"]
+					>
+				} & AttioLists
 				comments: AttioComments
 				threads: AttioThreads
 				tasks: AttioTasks
@@ -94,11 +115,13 @@ export const AttioClient =
 							const notes = yield* AttioNotes
 							const objects = yield* AttioObjects
 							const records = yield* AttioRecords
+							const entries = yield* AttioEntries
+							const lists = yield* AttioLists
 							const meta = yield* AttioMeta
 							const webhooks = yield* AttioWebhooks
 							const workspaceMembers = yield* AttioWorkspaceMembers
 
-							const schemas = processObjectsConfig(config)
+							const schemas = processSchemas(config)
 
 							return new Proxy(
 								{
@@ -107,6 +130,25 @@ export const AttioClient =
 									tasks,
 									notes,
 									objects,
+									lists: new Proxy(lists as any, {
+										get(target, listName: string) {
+											// check if it's a lists service method
+											if (listName in target) {
+												return target[listName]
+											}
+
+											// check if we have a schema for this list
+											const listSchema =
+												schemas.lists[listName as keyof typeof schemas.lists]
+											const input = listSchema.input ?? Schema.Any
+											const output = listSchema.output ?? Schema.Any
+
+											return {
+												list: (params?: any) =>
+													entries.list(listName, { input, output }, params),
+											}
+										},
+									}),
 									meta,
 									webhooks,
 									workspaceMembers,
@@ -118,12 +160,13 @@ export const AttioClient =
 											return target[resource]
 										}
 
-										const schema = schemas[resource as keyof typeof schemas]
+										const schema =
+											schemas.objects[resource as keyof typeof schemas.objects]
 										const input = schema.input ?? Schema.Any
 										const output = schema.output ?? Schema.Any
 
 										return {
-											list: (params?: ListParams) =>
+											list: (params?: any) =>
 												records.list(resource, { input, output }, params),
 
 											assert: (matchingAttribute: string, data: any) =>
@@ -185,6 +228,8 @@ export const AttioClient =
 								AttioNotes.Default,
 								AttioObjects.Default,
 								AttioRecords.Default,
+								AttioEntries.Default,
+								AttioLists.Default,
 								AttioMeta.Default,
 								AttioWebhooks.Default,
 								AttioWorkspaceMembers.Default,

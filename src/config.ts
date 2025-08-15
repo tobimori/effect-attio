@@ -1,14 +1,23 @@
 import type { AttributeDef } from "./schemas/attribute-builder.js"
-import { createSchemas } from "./schemas/helpers.js"
+import {
+	baseListEntryAttributes,
+	baseObjectAttributes,
+	createSchemas,
+} from "./schemas/helpers.js"
 import * as StandardObjects from "./schemas/objects.js"
 
 // Objects can have fields that are either AttributeDef or have input/output properties (like .Multiple)
 type AttributeLike = AttributeDef | { input: any; output: any }
 
 export type ObjectConfig = boolean | Record<string, AttributeLike>
+export type ListConfig = Record<string, AttributeLike>
 
-export type ObjectsConfig<T extends Record<string, ObjectConfig> = {}> = {
+export type AttioClientSchemas<
+	T extends Record<string, ObjectConfig> = {},
+	L extends Record<string, ListConfig> = {},
+> = {
 	objects?: T
+	lists?: L
 }
 
 export const DEFAULT_DISABLED_OBJECTS = [
@@ -38,16 +47,19 @@ export type MergedObjectFields<T extends Record<string, ObjectConfig>> = {
 		? T[K] extends false
 			? never
 			: never
-		: K extends typeof DEFAULT_DISABLED_OBJECTS[number]
+		: K extends (typeof DEFAULT_DISABLED_OBJECTS)[number]
 			? never
 			: K]: (typeof StandardObjects)[K]
 }
 
-export function processObjectsConfig<T extends Record<string, ObjectConfig>>(
-	config: ObjectsConfig<T>,
-) {
-	const schemas: Record<string, ReturnType<typeof createSchemas>> = {}
+export function processSchemas<
+	T extends Record<string, ObjectConfig>,
+	L extends Record<string, ListConfig>,
+>(config: AttioClientSchemas<T, L>) {
+	const objectSchemas = {} as any
+	const listSchemas = {} as any
 
+	// process objects
 	if (config.objects) {
 		for (const [name, objectConfig] of Object.entries(config.objects)) {
 			if (objectConfig === false) continue
@@ -57,14 +69,23 @@ export function processObjectsConfig<T extends Record<string, ObjectConfig>>(
 
 			if (standardFields) {
 				if (objectConfig === true) {
-					schemas[name] = createSchemas(standardFields)
+					objectSchemas[name] = createSchemas(
+						standardFields,
+						baseObjectAttributes,
+					)
 				} else {
 					const mergedFields = { ...standardFields, ...objectConfig }
-					schemas[name] = createSchemas(mergedFields)
+					objectSchemas[name] = createSchemas(
+						mergedFields,
+						baseObjectAttributes,
+					)
 				}
 			} else {
 				if (typeof objectConfig !== "boolean") {
-					schemas[name] = createSchemas(objectConfig)
+					objectSchemas[name] = createSchemas(
+						objectConfig,
+						baseObjectAttributes,
+					)
 				}
 			}
 		}
@@ -81,13 +102,30 @@ export function processObjectsConfig<T extends Record<string, ObjectConfig>>(
 				continue
 			}
 
-			schemas[name] = createSchemas(fields)
+			objectSchemas[name] = createSchemas(fields, baseObjectAttributes)
 		}
 	}
 
-	return schemas as {
-		[K in keyof MergedObjectFields<T>]: ReturnType<
-			typeof createSchemas<MergedObjectFields<T>[K]>
-		>
+	// process lists
+	if (config.lists) {
+		for (const [name, listConfig] of Object.entries(config.lists)) {
+			listSchemas[name] = createSchemas(listConfig, baseListEntryAttributes)
+		}
+	}
+
+	return {
+		objects: objectSchemas as {
+			[K in keyof MergedObjectFields<T>]: ReturnType<
+				typeof createSchemas<
+					MergedObjectFields<T>[K],
+					typeof baseObjectAttributes
+				>
+			>
+		},
+		lists: listSchemas as {
+			[K in keyof L]: ReturnType<
+				typeof createSchemas<L[K], typeof baseListEntryAttributes>
+			>
+		},
 	}
 }

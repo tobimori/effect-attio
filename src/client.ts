@@ -237,10 +237,6 @@ export const AttioClient =
 										if (resource in target) {
 											return target[resource]
 										}
-										// Check if it's a configured object
-										if (!(resource in schemas)) {
-											throw new Error(`Unknown resource: ${resource}`)
-										}
 
 										const schema = schemas[resource as keyof typeof schemas]
 										const input = schema.input ?? Schema.Any

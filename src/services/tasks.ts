@@ -2,6 +2,11 @@ import * as HttpClientRequest from "@effect/platform/HttpClientRequest"
 import * as HttpClientResponse from "@effect/platform/HttpClientResponse"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
+import {
+	mapAttioErrors,
+	AttioValidationErrorTransform,
+	AttioNotFoundErrorTransform,
+} from "../error-transforms.js"
 import { AttioHttpClient } from "../http-client.js"
 import { DateTimeISOString } from "../shared/datetime-input.js"
 import {
@@ -92,6 +97,7 @@ export class AttioTasks extends Effect.Service<AttioTasks>()("AttioTasks", {
 					Effect.flatMap(http.execute),
 					Effect.flatMap(HttpClientResponse.schemaBodyJson(DataStruct(Task))),
 					Effect.map((result) => result.data),
+					mapAttioErrors(AttioValidationErrorTransform),
 				)
 			}),
 
@@ -104,6 +110,7 @@ export class AttioTasks extends Effect.Service<AttioTasks>()("AttioTasks", {
 				return yield* http.get(`/v2/tasks/${taskId}`).pipe(
 					Effect.flatMap(HttpClientResponse.schemaBodyJson(DataStruct(Task))),
 					Effect.map((result) => result.data),
+					mapAttioErrors(AttioNotFoundErrorTransform),
 				)
 			}),
 
@@ -113,7 +120,9 @@ export class AttioTasks extends Effect.Service<AttioTasks>()("AttioTasks", {
 			 * Required scopes: `task:read-write`
 			 */
 			delete: Effect.fn("tasks.delete")(function* (taskId: string) {
-				yield* http.del(`/v2/tasks/${taskId}`)
+				yield* http
+					.del(`/v2/tasks/${taskId}`)
+					.pipe(mapAttioErrors(AttioNotFoundErrorTransform))
 			}),
 
 			/**
@@ -137,6 +146,10 @@ export class AttioTasks extends Effect.Service<AttioTasks>()("AttioTasks", {
 					Effect.flatMap(http.execute),
 					Effect.flatMap(HttpClientResponse.schemaBodyJson(DataStruct(Task))),
 					Effect.map((result) => result.data),
+					mapAttioErrors(
+						AttioNotFoundErrorTransform,
+						AttioValidationErrorTransform,
+					),
 				)
 			}),
 		}

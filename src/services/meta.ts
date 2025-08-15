@@ -3,6 +3,7 @@ import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 import { AttioHttpClient } from "../http-client.js"
 import { WorkspaceId } from "../shared/schemas.js"
+
 export const TokenInfo = Schema.Struct({
 	active: Schema.Boolean,
 	scope: Schema.String,

@@ -2,6 +2,10 @@ import * as HttpClientRequest from "@effect/platform/HttpClientRequest"
 import * as HttpClientResponse from "@effect/platform/HttpClientResponse"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
+import {
+	AttioNotFoundErrorTransform,
+	mapAttioErrors,
+} from "../error-transforms.js"
 import { AttioHttpClient } from "../http-client.js"
 import { DataStruct } from "../shared/schemas.js"
 import { Comment } from "./comments.js"
@@ -66,6 +70,7 @@ export class AttioThreads extends Effect.Service<AttioThreads>()(
 							HttpClientResponse.schemaBodyJson(DataStruct(Thread)),
 						),
 						Effect.map((result) => result.data),
+						mapAttioErrors(AttioNotFoundErrorTransform),
 					)
 				}),
 			}

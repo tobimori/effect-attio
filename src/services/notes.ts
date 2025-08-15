@@ -2,12 +2,19 @@ import * as HttpClientRequest from "@effect/platform/HttpClientRequest"
 import * as HttpClientResponse from "@effect/platform/HttpClientResponse"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
+import {
+	AttioNotFoundErrorTransform,
+	AttioValidationErrorTransform,
+	mapAttioErrors,
+} from "../error-transforms.js"
 import { AttioHttpClient } from "../http-client.js"
 import { Actor, DataStruct, Tag } from "../shared/schemas.js"
+
 export const NoteId = Schema.Struct({
 	workspace_id: Schema.String,
 	note_id: Schema.String,
 })
+
 export const Note = Schema.Struct({
 	id: NoteId,
 	parent_object: Schema.String,
@@ -72,6 +79,7 @@ export class AttioNotes extends Effect.Service<AttioNotes>()("AttioNotes", {
 					Effect.flatMap(http.execute),
 					Effect.flatMap(HttpClientResponse.schemaBodyJson(DataStruct(Note))),
 					Effect.map((result) => result.data),
+					mapAttioErrors(AttioValidationErrorTransform),
 				)
 			}),
 
@@ -84,6 +92,7 @@ export class AttioNotes extends Effect.Service<AttioNotes>()("AttioNotes", {
 				return yield* http.get(`/v2/notes/${noteId}`).pipe(
 					Effect.flatMap(HttpClientResponse.schemaBodyJson(DataStruct(Note))),
 					Effect.map((result) => result.data),
+					mapAttioErrors(AttioNotFoundErrorTransform),
 				)
 			}),
 
@@ -93,7 +102,9 @@ export class AttioNotes extends Effect.Service<AttioNotes>()("AttioNotes", {
 			 * Required scopes: `note:read-write`
 			 */
 			delete: Effect.fn("notes.delete")(function* (noteId: string) {
-				yield* http.del(`/v2/notes/${noteId}`)
+				yield* http
+					.del(`/v2/notes/${noteId}`)
+					.pipe(mapAttioErrors(AttioNotFoundErrorTransform))
 			}),
 		}
 	}),

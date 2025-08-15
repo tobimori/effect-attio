@@ -2,8 +2,16 @@ import * as HttpClientRequest from "@effect/platform/HttpClientRequest"
 import * as HttpClientResponse from "@effect/platform/HttpClientResponse"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
+import {
+	AttioNotFoundErrorTransform,
+	mapAttioErrors,
+} from "../error-transforms.js"
 import { AttioHttpClient } from "../http-client.js"
-import { DataStruct, WorkspaceId, WorkspaceMemberId } from "../shared/schemas.js"
+import {
+	DataStruct,
+	WorkspaceId,
+	WorkspaceMemberId,
+} from "../shared/schemas.js"
 
 export const WorkspaceMemberIdStruct = Schema.Struct({
 	...WorkspaceId.fields,
@@ -58,11 +66,10 @@ export class AttioWorkspaceMembers extends Effect.Service<AttioWorkspaceMembers>
 						.get(`/v2/workspace_members/${workspaceMemberId}`)
 						.pipe(
 							Effect.flatMap(
-								HttpClientResponse.schemaBodyJson(
-									DataStruct(WorkspaceMember),
-								),
+								HttpClientResponse.schemaBodyJson(DataStruct(WorkspaceMember)),
 							),
 							Effect.map((result) => result.data),
+							mapAttioErrors(AttioNotFoundErrorTransform),
 						)
 				}),
 			}

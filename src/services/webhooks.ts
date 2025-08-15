@@ -2,6 +2,11 @@ import * as HttpClientRequest from "@effect/platform/HttpClientRequest"
 import * as HttpClientResponse from "@effect/platform/HttpClientResponse"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
+import {
+	AttioNotFoundErrorTransform,
+	AttioValidationErrorTransform,
+	mapAttioErrors,
+} from "../error-transforms.js"
 import { AttioHttpClient } from "../http-client.js"
 import { DataStruct, WorkspaceId } from "../shared/schemas.js"
 
@@ -93,6 +98,7 @@ export class AttioWebhooks extends Effect.Service<AttioWebhooks>()(
 							HttpClientResponse.schemaBodyJson(DataStruct(WebhookWithSecret)),
 						),
 						Effect.map((result) => result.data),
+						mapAttioErrors(AttioValidationErrorTransform),
 					)
 				}),
 
@@ -107,6 +113,7 @@ export class AttioWebhooks extends Effect.Service<AttioWebhooks>()(
 							HttpClientResponse.schemaBodyJson(DataStruct(Webhook)),
 						),
 						Effect.map((result) => result.data),
+						mapAttioErrors(AttioNotFoundErrorTransform),
 					)
 				}),
 
@@ -131,6 +138,10 @@ export class AttioWebhooks extends Effect.Service<AttioWebhooks>()(
 							HttpClientResponse.schemaBodyJson(DataStruct(Webhook)),
 						),
 						Effect.map((result) => result.data),
+						mapAttioErrors(
+							AttioNotFoundErrorTransform,
+							AttioValidationErrorTransform,
+						),
 					)
 				}),
 
@@ -140,7 +151,9 @@ export class AttioWebhooks extends Effect.Service<AttioWebhooks>()(
 				 * Required scopes: `webhook:read-write`
 				 */
 				delete: Effect.fn("webhooks.delete")(function* (webhookId: string) {
-					yield* http.del(`/v2/webhooks/${webhookId}`)
+					yield* http
+						.del(`/v2/webhooks/${webhookId}`)
+						.pipe(mapAttioErrors(AttioNotFoundErrorTransform))
 				}),
 			}
 		}),

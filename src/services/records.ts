@@ -2,6 +2,15 @@ import * as HttpClientRequest from "@effect/platform/HttpClientRequest"
 import * as HttpClientResponse from "@effect/platform/HttpClientResponse"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
+import {
+	AttioConflictErrorTransform,
+	AttioImmutableValueErrorTransform,
+	AttioMissingValueErrorTransform,
+	AttioMultipleMatchErrorTransform,
+	AttioNotFoundErrorTransform,
+	AttioValidationErrorTransform,
+	mapAttioErrors,
+} from "../error-transforms.js"
 import { AttioHttpClient } from "../http-client.js"
 import { DataStruct } from "../shared/schemas.js"
 
@@ -114,6 +123,11 @@ export class AttioRecords extends Effect.Service<AttioRecords>()(
 							),
 						),
 						Effect.map((result) => result.data),
+						mapAttioErrors(
+							AttioValidationErrorTransform,
+							AttioMissingValueErrorTransform,
+							AttioMultipleMatchErrorTransform,
+						),
 					)
 				}),
 
@@ -146,6 +160,7 @@ export class AttioRecords extends Effect.Service<AttioRecords>()(
 								),
 							),
 							Effect.map((result) => result.data),
+							mapAttioErrors(AttioNotFoundErrorTransform),
 						)
 				}),
 
@@ -187,6 +202,10 @@ export class AttioRecords extends Effect.Service<AttioRecords>()(
 							),
 						),
 						Effect.map((result) => result.data),
+						mapAttioErrors(
+							AttioValidationErrorTransform,
+							AttioConflictErrorTransform,
+						),
 					)
 				}),
 
@@ -234,6 +253,11 @@ export class AttioRecords extends Effect.Service<AttioRecords>()(
 							),
 						),
 						Effect.map((result) => result.data),
+						mapAttioErrors(
+							AttioNotFoundErrorTransform,
+							AttioValidationErrorTransform,
+							AttioImmutableValueErrorTransform,
+						),
 					)
 				}),
 
@@ -281,6 +305,11 @@ export class AttioRecords extends Effect.Service<AttioRecords>()(
 							),
 						),
 						Effect.map((result) => result.data),
+						mapAttioErrors(
+							AttioNotFoundErrorTransform,
+							AttioValidationErrorTransform,
+							AttioImmutableValueErrorTransform,
+						),
 					)
 				}),
 
@@ -297,7 +326,9 @@ export class AttioRecords extends Effect.Service<AttioRecords>()(
 					object: string,
 					recordId: string,
 				) {
-					yield* http.del(`/v2/objects/${object}/records/${recordId}`)
+					yield* http
+						.del(`/v2/objects/${object}/records/${recordId}`)
+						.pipe(mapAttioErrors(AttioNotFoundErrorTransform))
 				}),
 
 				/**
@@ -405,9 +436,7 @@ export type GenericAttioRecords<
 		data: Schema.Schema.Type<I>,
 	) => ReturnType<typeof AttioRecords.Service.create<I, O>>
 
-	get: (
-		id: string,
-	) => ReturnType<typeof AttioRecords.Service.get<I, O>>
+	get: (id: string) => ReturnType<typeof AttioRecords.Service.get<I, O>>
 
 	update: (
 		id: string,

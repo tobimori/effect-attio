@@ -3,12 +3,19 @@ import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 import {
 	AttioConflictError,
+	AttioFilterError,
+	AttioForbiddenError,
+	AttioImmutableValueError,
+	AttioMissingValueError,
+	AttioMultipleMatchError,
 	AttioNotFoundError,
 	AttioRateLimitError,
+	AttioSystemEditError,
 	AttioUnauthorizedError,
 	AttioValidationError,
 } from "./errors.js"
 
+// 404 Not Found - code: "not_found"
 export const AttioNotFoundErrorTransform = Schema.transform(
 	Schema.Struct({
 		status_code: Schema.Literal(404),
@@ -32,6 +39,7 @@ export const AttioNotFoundErrorTransform = Schema.transform(
 	},
 )
 
+// 400 Bad Request - code: "validation_type" with validation_errors array
 export const AttioValidationErrorTransform = Schema.transform(
 	Schema.Struct({
 		status_code: Schema.Literal(400),
@@ -72,11 +80,136 @@ export const AttioValidationErrorTransform = Schema.transform(
 	},
 )
 
+// 400 Bad Request - code: "missing_value" or "value_not_found"
+export const AttioMissingValueErrorTransform = Schema.transform(
+	Schema.Struct({
+		status_code: Schema.Literal(400),
+		type: Schema.Literal("invalid_request_error"),
+		code: Schema.Union(
+			Schema.Literal("missing_value"),
+			Schema.Literal("value_not_found"),
+		),
+		message: Schema.String,
+	}),
+	AttioMissingValueError,
+	{
+		strict: true,
+		decode: (attioError) =>
+			new AttioMissingValueError({
+				message: attioError.message,
+				code: attioError.code,
+			}),
+		encode: (error) => ({
+			status_code: 400 as const,
+			type: "invalid_request_error" as const,
+			code: error.code,
+			message: error.message,
+		}),
+	},
+)
+
+// 400 Bad Request - code: "immutable_value"
+export const AttioImmutableValueErrorTransform = Schema.transform(
+	Schema.Struct({
+		status_code: Schema.Literal(400),
+		type: Schema.Literal("invalid_request_error"),
+		code: Schema.Literal("immutable_value"),
+		message: Schema.String,
+	}),
+	AttioImmutableValueError,
+	{
+		strict: true,
+		decode: (attioError) =>
+			new AttioImmutableValueError({
+				message: attioError.message,
+			}),
+		encode: (error) => ({
+			status_code: 400 as const,
+			type: "invalid_request_error" as const,
+			code: "immutable_value" as const,
+			message: error.message,
+		}),
+	},
+)
+
+// 400 Bad Request - code: "filter_error"
+export const AttioFilterErrorTransform = Schema.transform(
+	Schema.Struct({
+		status_code: Schema.Literal(400),
+		type: Schema.Literal("invalid_request_error"),
+		code: Schema.Literal("filter_error"),
+		message: Schema.String,
+	}),
+	AttioFilterError,
+	{
+		strict: true,
+		decode: (attioError) =>
+			new AttioFilterError({
+				message: attioError.message,
+			}),
+		encode: (error) => ({
+			status_code: 400 as const,
+			type: "invalid_request_error" as const,
+			code: "filter_error" as const,
+			message: error.message,
+		}),
+	},
+)
+
+// 400 Bad Request - code: "multiple_match_results"
+export const AttioMultipleMatchErrorTransform = Schema.transform(
+	Schema.Struct({
+		status_code: Schema.Literal(400),
+		type: Schema.Literal("invalid_request_error"),
+		code: Schema.Literal("multiple_match_results"),
+		message: Schema.String,
+	}),
+	AttioMultipleMatchError,
+	{
+		strict: true,
+		decode: (attioError) =>
+			new AttioMultipleMatchError({
+				message: attioError.message,
+			}),
+		encode: (error) => ({
+			status_code: 400 as const,
+			type: "invalid_request_error" as const,
+			code: "multiple_match_results" as const,
+			message: error.message,
+		}),
+	},
+)
+
+// 400 Bad Request - code: "system_edit_unauthorized"
+export const AttioSystemEditErrorTransform = Schema.transform(
+	Schema.Struct({
+		status_code: Schema.Literal(400),
+		type: Schema.Literal("invalid_request_error"),
+		code: Schema.Literal("system_edit_unauthorized"),
+		message: Schema.String,
+	}),
+	AttioSystemEditError,
+	{
+		strict: true,
+		decode: (attioError) =>
+			new AttioSystemEditError({
+				message: attioError.message,
+			}),
+		encode: (error) => ({
+			status_code: 400 as const,
+			type: "invalid_request_error" as const,
+			code: "system_edit_unauthorized" as const,
+			message: error.message,
+		}),
+	},
+)
+
+// 409 Conflict - code: "slug_conflict"
 export const AttioConflictErrorTransform = Schema.transform(
 	Schema.Struct({
 		status_code: Schema.Literal(409),
 		type: Schema.Literal("invalid_request_error"),
-		code: Schema.String,
+		code: Schema.Literal("slug_conflict"),
 		message: Schema.String,
 	}),
 	AttioConflictError,
@@ -90,12 +223,13 @@ export const AttioConflictErrorTransform = Schema.transform(
 		encode: (error) => ({
 			status_code: 409 as const,
 			type: "invalid_request_error" as const,
-			code: error.code,
+			code: "slug_conflict" as const,
 			message: error.message,
 		}),
 	},
 )
 
+// 401 Unauthorized - code: "unauthorized"
 export const AttioUnauthorizedErrorTransform = Schema.transform(
 	Schema.Struct({
 		status_code: Schema.Literal(401),
@@ -119,6 +253,32 @@ export const AttioUnauthorizedErrorTransform = Schema.transform(
 	},
 )
 
+// 403 Forbidden - code: "billing_error"
+export const AttioForbiddenErrorTransform = Schema.transform(
+	Schema.Struct({
+		status_code: Schema.Literal(403),
+		type: Schema.Literal("auth_error"),
+		code: Schema.Literal("billing_error"),
+		message: Schema.String,
+	}),
+	AttioForbiddenError,
+	{
+		strict: true,
+		decode: (attioError) =>
+			new AttioForbiddenError({
+				message: attioError.message,
+				code: attioError.code,
+			}),
+		encode: (error) => ({
+			status_code: 403 as const,
+			type: "auth_error" as const,
+			code: error.code as "billing_error",
+			message: error.message,
+		}),
+	},
+)
+
+// 429 Rate Limit - code can vary
 export const AttioRateLimitErrorTransform = Schema.transform(
 	Schema.Struct({
 		status_code: Schema.Literal(429),
@@ -143,15 +303,6 @@ export const AttioRateLimitErrorTransform = Schema.transform(
 			retry_after: error.retryAfter,
 		}),
 	},
-)
-
-// all possible attio api errors
-export const AttioErrorTransform = Schema.Union(
-	AttioNotFoundErrorTransform,
-	AttioValidationErrorTransform,
-	AttioConflictErrorTransform,
-	AttioUnauthorizedErrorTransform,
-	AttioRateLimitErrorTransform,
 )
 
 // helper to map ResponseError to specific attio errors

@@ -80,15 +80,11 @@ export class AttioHttpClient extends Effect.Service<AttioHttpClient>()(
 										Effect.gen(function* () {
 											// calculate delay until retry-after time
 											const now = yield* DateTime.now
-											const diff = DateTime.distance(
-												now,
-												rateLimitError.retryAfter,
-											)
 
-											// ensure minimum delay of 100ms
-											return Duration.greaterThan(diff, Duration.millis(100))
-												? diff
-												: Duration.millis(100)
+											return Duration.max(
+												DateTime.distance(now, rateLimitError.retryAfter),
+												"100 millis",
+											)
 										}),
 									),
 									Match.orElse(() => Effect.succeed(Duration.zero)),

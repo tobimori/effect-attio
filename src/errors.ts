@@ -28,7 +28,10 @@ export class AttioMissingValueError extends Schema.TaggedError<AttioMissingValue
 	"AttioMissingValueError",
 	{
 		message: Schema.String,
-		code: Schema.Union(Schema.Literal("missing_value"), Schema.Literal("value_not_found")),
+		code: Schema.Union(
+			Schema.Literal("missing_value"),
+			Schema.Literal("value_not_found"),
+		),
 	},
 ) {}
 
@@ -86,7 +89,7 @@ export class AttioRateLimitError extends Schema.TaggedError<AttioRateLimitError>
 	"AttioRateLimitError",
 	{
 		message: Schema.String,
-		retryAfter: Schema.optional(Schema.Number),
+		retryAfter: Schema.DateTimeUtcFromSelf,
 	},
 ) {}
 

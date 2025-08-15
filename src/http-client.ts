@@ -2,15 +2,20 @@ import * as HttpClient from "@effect/platform/HttpClient"
 import * as HttpClientError from "@effect/platform/HttpClientError"
 import * as HttpClientRequest from "@effect/platform/HttpClientRequest"
 import * as Config from "effect/Config"
+import * as DateTime from "effect/DateTime"
+import * as Duration from "effect/Duration"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
+import * as Match from "effect/Match"
 import * as Option from "effect/Option"
 import type * as Redacted from "effect/Redacted"
+import * as Schedule from "effect/Schedule"
 import * as Schema from "effect/Schema"
 import {
 	AttioRateLimitErrorTransform,
 	AttioUnauthorizedErrorTransform,
 } from "./error-transforms.js"
+import type { AttioRateLimitError, AttioUnauthorizedError } from "./errors.js"
 
 const GlobalErrors = Schema.Union(
 	AttioUnauthorizedErrorTransform,
@@ -20,6 +25,7 @@ const GlobalErrors = Schema.Union(
 export interface AttioHttpClientOptions {
 	apiKey: Redacted.Redacted<string>
 	baseUrl?: string
+	retryRateLimits?: boolean
 }
 
 export class AttioHttpClient extends Effect.Service<AttioHttpClient>()(
@@ -41,7 +47,10 @@ export class AttioHttpClient extends Effect.Service<AttioHttpClient>()(
 					(response) =>
 						Effect.gen(function* () {
 							const json = yield* response.json
-							const globalError = Schema.decodeUnknownOption(GlobalErrors)(json)
+							const globalError = Schema.decodeUnknownOption(GlobalErrors)({
+								...(json as { [k: string]: unknown }),
+								retry_after: response.headers["retry-after"],
+							})
 
 							if (Option.isSome(globalError)) {
 								return yield* globalError.value
@@ -55,6 +64,46 @@ export class AttioHttpClient extends Effect.Service<AttioHttpClient>()(
 							})
 						}),
 				),
+				(c) => {
+					if (opts.retryRateLimits === false) return c
+
+					return HttpClient.retry(
+						c,
+						Schedule.identity<
+							| HttpClientError.HttpClientError
+							| AttioUnauthorizedError
+							| AttioRateLimitError
+						>().pipe(
+							Schedule.addDelayEffect((error) =>
+								Match.value(error).pipe(
+									Match.tag("AttioRateLimitError", (rateLimitError) =>
+										Effect.gen(function* () {
+											// calculate delay until retry-after time
+											const now = yield* DateTime.now
+											const diff = DateTime.distance(
+												now,
+												rateLimitError.retryAfter,
+											)
+
+											// ensure minimum delay of 100ms
+											return Duration.greaterThan(diff, Duration.millis(100))
+												? diff
+												: Duration.millis(100)
+										}),
+									),
+									Match.orElse(() => Effect.succeed(Duration.zero)),
+								),
+							),
+							// only continue for rate limit errors
+							Schedule.whileInput((error) =>
+								Match.value(error).pipe(
+									Match.tag("AttioRateLimitError", () => true),
+									Match.orElse(() => false),
+								),
+							),
+						),
+					)
+				},
 			)
 		}),
 	},

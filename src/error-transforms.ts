@@ -14,6 +14,7 @@ import {
 	AttioUnauthorizedError,
 	AttioValidationError,
 } from "./errors.js"
+import { HttpDate } from "./shared/http-date.js"
 
 // 404 Not Found - code: "not_found"
 export const AttioNotFoundErrorTransform = Schema.transform(
@@ -285,16 +286,17 @@ export const AttioRateLimitErrorTransform = Schema.transform(
 		type: Schema.Literal("rate_limit_error"),
 		code: Schema.String,
 		message: Schema.String,
-		retry_after: Schema.optional(Schema.Number),
+		retry_after: HttpDate,
 	}),
 	AttioRateLimitError,
 	{
 		strict: true,
-		decode: (attioError) =>
-			new AttioRateLimitError({
+		decode: (attioError) => {
+			return new AttioRateLimitError({
 				message: attioError.message,
 				retryAfter: attioError.retry_after,
-			}),
+			})
+		},
 		encode: (error) => ({
 			status_code: 429 as const,
 			type: "rate_limit_error" as const,

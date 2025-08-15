@@ -137,6 +137,43 @@ export const AttioClient =
 											return {
 												list: (params?: any) =>
 													entries.list(listName, { input, output }, params),
+												assert: (data: any) =>
+													entries.assert(listName, { input, output }, data),
+												create: (data: any) =>
+													entries.create(listName, { input, output }, data),
+												get: (entryId: string) =>
+													entries.get(listName, { input, output }, entryId),
+												update: (entryId: string, data: any) =>
+													entries.update(
+														listName,
+														entryId,
+														{ input, output },
+														data,
+													),
+												delete: (entryId: string) =>
+													entries.delete(listName, entryId),
+												patch: (entryId: string, data: any) =>
+													entries.patch(
+														listName,
+														entryId,
+														{ input, output },
+														data,
+													),
+												listAttributeValues: (
+													entryId: string,
+													attribute: string,
+													params?: {
+														show_historic?: boolean
+														limit?: number
+														offset?: number
+													},
+												) =>
+													entries.listAttributeValues(
+														listName,
+														entryId,
+														attribute,
+														params,
+													),
 											}
 										},
 									}),

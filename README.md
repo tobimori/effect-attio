@@ -38,17 +38,38 @@ class MyAttioClient extends AttioClient<MyAttioClient>()("MyAttioClient", {
       customer: Attributes.CompanyRecordReference,
     },
   },
+  lists: {
+    // define custom lists with specific attributes
+    opportunities: {
+      title: Attributes.Text.Required,
+      value: Attributes.Currency,
+      probability: Attributes.Number,
+      expected_close_date: Attributes.Date,
+      stage: Attributes.Select.Required,
+      notes: Attributes.Text,
+    },
+  },
 }) {}
 
 // create a program using the client
 const program = Effect.gen(function* () {
   const attio = yield* MyAttioClient
 
-  // create a new company
+  // create a new company (or get existing if domain already exists)
   const company = yield* attio.companies.create({
     name: "Acme Corp",
     domains: ["acme.com"],
-  })
+  }).pipe(
+    Effect.catchTag("AttioConflictError", (error) => 
+      Effect.gen(function* () {
+        yield* Effect.log(`Company already exists: ${error.message}`)
+        const existing = yield* attio.companies.list({ 
+          filter: { domains: ["acme.com"] } 
+        })
+        return existing[0]
+      })
+    )
+  )
 
   // create an invoice linked to the company
   const invoice = yield* attio.invoices.create({
@@ -58,14 +79,18 @@ const program = Effect.gen(function* () {
     customer: company.id.record_id,
   })
 
-  // list people from the company
-  const people = yield* attio.people.list({
-    filter: {
-      company: company.id.record_id
+  // create a new opportunity list entry for the company
+  const opportunity = yield* attio.lists.opportunities.create({
+    parent_record_id: company.id.record_id,
+    parent_object: "companies",
+    entry_values: {
+      title: "Enterprise Deal Q1 2025",
+      value: 50000,
+      stage: "negotiation",
     }
   })
 
-  return { company, invoice, people }
+  return { company, invoice, opportunity }
 })
 
 // run the program with configuration

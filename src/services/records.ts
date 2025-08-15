@@ -1,5 +1,4 @@
 import * as HttpClientRequest from "@effect/platform/HttpClientRequest"
-import * as HttpClientResponse from "@effect/platform/HttpClientResponse"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 import {
@@ -12,6 +11,7 @@ import {
 	mapAttioErrors,
 } from "../error-transforms.js"
 import { AttioHttpClient } from "../http-client.js"
+import { schemaBodyJsonNever } from "../schemas/body.js"
 import { DataStruct } from "../shared/schemas.js"
 
 const RecordId = Schema.Struct({
@@ -35,11 +35,10 @@ export class AttioRecords extends Effect.Service<AttioRecords>()(
 				 * @see https://docs.attio.com/rest-api/endpoint-reference/records/list-records
 				 */
 				list: Effect.fn(`record.list`)(function* <
-					_I extends Schema.Schema.Any,
-					O extends Schema.Schema.Any,
+					T extends { input: Schema.Schema.Any; output: Schema.Schema.Any },
 				>(
 					object: string,
-					schema: { input: _I; output: O },
+					schema: T,
 					params?: {
 						filter?: Record<string, any>
 						sorts?: Array<{
@@ -63,7 +62,7 @@ export class AttioRecords extends Effect.Service<AttioRecords>()(
 						}),
 						Effect.flatMap(http.execute),
 						Effect.flatMap(
-							HttpClientResponse.schemaBodyJson(
+							schemaBodyJsonNever(
 								DataStruct(
 									Schema.Array(
 										Schema.Struct({
@@ -91,13 +90,12 @@ export class AttioRecords extends Effect.Service<AttioRecords>()(
 				 * @see https://docs.attio.com/rest-api/endpoint-reference/records/create-or-update-a-record
 				 */
 				assert: Effect.fn(`record.assert`)(function* <
-					I extends Schema.Schema.Any,
-					O extends Schema.Schema.Any,
+					T extends { input: Schema.Schema.Any; output: Schema.Schema.Any },
 				>(
 					object: string,
-					schema: { input: I; output: O },
+					schema: T,
 					matchingAttribute: string,
-					data: Schema.Schema.Type<I>,
+					data: Schema.Schema.Type<T["input"]>,
 				) {
 					return yield* HttpClientRequest.put(
 						`/v2/objects/${object}/records`,
@@ -111,7 +109,7 @@ export class AttioRecords extends Effect.Service<AttioRecords>()(
 						}),
 						Effect.flatMap(http.execute),
 						Effect.flatMap(
-							HttpClientResponse.schemaBodyJson(
+							schemaBodyJsonNever(
 								DataStruct(
 									Schema.Struct({
 										id: RecordId,
@@ -141,14 +139,13 @@ export class AttioRecords extends Effect.Service<AttioRecords>()(
 				 * @see https://docs.attio.com/rest-api/endpoint-reference/records/get-a-record
 				 */
 				get: Effect.fn(`record.get`)(function* <
-					_I extends Schema.Schema.Any,
-					O extends Schema.Schema.Any,
-				>(object: string, schema: { input: _I; output: O }, recordId: string) {
+					T extends { input: Schema.Schema.Any; output: Schema.Schema.Any },
+				>(object: string, schema: T, recordId: string) {
 					return yield* http
 						.get(`/v2/objects/${object}/records/${recordId}`)
 						.pipe(
 							Effect.flatMap(
-								HttpClientResponse.schemaBodyJson(
+								schemaBodyJsonNever(
 									DataStruct(
 										Schema.Struct({
 											id: RecordId,
@@ -175,13 +172,8 @@ export class AttioRecords extends Effect.Service<AttioRecords>()(
 				 * @see https://docs.attio.com/rest-api/endpoint-reference/records/create-a-record
 				 */
 				create: Effect.fn(`record.create`)(function* <
-					I extends Schema.Schema.Any,
-					O extends Schema.Schema.Any,
-				>(
-					object: string,
-					schema: { input: I; output: O },
-					data: Schema.Schema.Type<I>,
-				) {
+					T extends { input: Schema.Schema.Any; output: Schema.Schema.Any },
+				>(object: string, schema: T, data: Schema.Schema.Type<T["input"]>) {
 					return yield* HttpClientRequest.post(
 						`/v2/objects/${object}/records`,
 					).pipe(
@@ -190,7 +182,7 @@ export class AttioRecords extends Effect.Service<AttioRecords>()(
 						}),
 						Effect.flatMap(http.execute),
 						Effect.flatMap(
-							HttpClientResponse.schemaBodyJson(
+							schemaBodyJsonNever(
 								DataStruct(
 									Schema.Struct({
 										id: RecordId,
@@ -221,13 +213,12 @@ export class AttioRecords extends Effect.Service<AttioRecords>()(
 				 * @see https://docs.attio.com/rest-api/endpoint-reference/records/update-a-record-overwrite-multiselect-values
 				 */
 				update: Effect.fn(`record.update`)(function* <
-					I extends Schema.Schema.Any,
-					O extends Schema.Schema.Any,
+					T extends { input: Schema.Schema.Any; output: Schema.Schema.Any },
 				>(
 					object: string,
-					schema: { input: I; output: O },
+					schema: T,
 					recordId: string,
-					data: Partial<Schema.Schema.Type<I>>,
+					data: Partial<Schema.Schema.Type<T["input"]>>,
 				) {
 					return yield* HttpClientRequest.put(
 						`/v2/objects/${object}/records/${recordId}`,
@@ -241,7 +232,7 @@ export class AttioRecords extends Effect.Service<AttioRecords>()(
 						}),
 						Effect.flatMap(http.execute),
 						Effect.flatMap(
-							HttpClientResponse.schemaBodyJson(
+							schemaBodyJsonNever(
 								DataStruct(
 									Schema.Struct({
 										id: RecordId,
@@ -273,13 +264,12 @@ export class AttioRecords extends Effect.Service<AttioRecords>()(
 				 * @see https://docs.attio.com/rest-api/endpoint-reference/records/update-a-record-append-multiselect-values
 				 */
 				patch: Effect.fn(`record.patch`)(function* <
-					I extends Schema.Schema.Any,
-					O extends Schema.Schema.Any,
+					T extends { input: Schema.Schema.Any; output: Schema.Schema.Any },
 				>(
 					object: string,
-					schema: { input: I; output: O },
+					schema: T,
 					recordId: string,
-					data: Partial<Schema.Schema.Type<I>>,
+					data: Partial<Schema.Schema.Type<T["input"]>>,
 				) {
 					return yield* HttpClientRequest.patch(
 						`/v2/objects/${object}/records/${recordId}`,
@@ -293,7 +283,7 @@ export class AttioRecords extends Effect.Service<AttioRecords>()(
 						}),
 						Effect.flatMap(http.execute),
 						Effect.flatMap(
-							HttpClientResponse.schemaBodyJson(
+							schemaBodyJsonNever(
 								DataStruct(
 									Schema.Struct({
 										id: RecordId,
@@ -363,9 +353,7 @@ export class AttioRecords extends Effect.Service<AttioRecords>()(
 						}),
 						http.execute,
 						Effect.flatMap(
-							HttpClientResponse.schemaBodyJson(
-								DataStruct(Schema.Array(Schema.Unknown)),
-							),
+							schemaBodyJsonNever(DataStruct(Schema.Array(Schema.Unknown))),
 						),
 						Effect.map((result) => result.data),
 					)
@@ -397,7 +385,7 @@ export class AttioRecords extends Effect.Service<AttioRecords>()(
 						}),
 						http.execute,
 						Effect.flatMap(
-							HttpClientResponse.schemaBodyJson(
+							schemaBodyJsonNever(
 								DataStruct(
 									Schema.Array(
 										Schema.Struct({
@@ -420,33 +408,32 @@ export class AttioRecords extends Effect.Service<AttioRecords>()(
 
 // extract method signatures from service with inferred types
 export type GenericAttioRecords<
-	I extends Schema.Schema.Any,
-	O extends Schema.Schema.Any,
+	T extends { input: Schema.Schema.Any; output: Schema.Schema.Any },
 > = {
 	list: (
-		params?: Parameters<typeof AttioRecords.Service.list<I, O>>[2],
-	) => ReturnType<typeof AttioRecords.Service.list<I, O>>
+		params?: Parameters<typeof AttioRecords.Service.list<T>>[2],
+	) => ReturnType<typeof AttioRecords.Service.list<T>>
 
 	assert: (
 		matchingAttribute: string,
-		data: Schema.Schema.Type<I>,
-	) => ReturnType<typeof AttioRecords.Service.assert<I, O>>
+		data: Schema.Schema.Type<T["input"]>,
+	) => ReturnType<typeof AttioRecords.Service.assert<T>>
 
 	create: (
-		data: Schema.Schema.Type<I>,
-	) => ReturnType<typeof AttioRecords.Service.create<I, O>>
+		data: Schema.Schema.Type<T["input"]>,
+	) => ReturnType<typeof AttioRecords.Service.create<T>>
 
-	get: (id: string) => ReturnType<typeof AttioRecords.Service.get<I, O>>
+	get: (id: string) => ReturnType<typeof AttioRecords.Service.get<T>>
 
 	update: (
 		id: string,
-		data: Schema.Schema.Type<I>,
-	) => ReturnType<typeof AttioRecords.Service.update<I, O>>
+		data: Schema.Schema.Type<T["input"]>,
+	) => ReturnType<typeof AttioRecords.Service.update<T>>
 
 	patch: (
 		id: string,
-		data: Schema.Schema.Type<I>,
-	) => ReturnType<typeof AttioRecords.Service.patch<I, O>>
+		data: Schema.Schema.Type<T["input"]>,
+	) => ReturnType<typeof AttioRecords.Service.patch<T>>
 
 	delete: (id: string) => ReturnType<typeof AttioRecords.Service.delete>
 

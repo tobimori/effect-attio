@@ -10,25 +10,17 @@ export const OptionalAttribute = <T extends AttributeDef>(field: T) => ({
 	output: Schema.optional(field.output),
 })
 
-export const baseObjectAttributes = {
-	created_at: Attributes.Timestamp.ReadOnly,
-	created_by: Attributes.ActorReference.ReadOnly,
-	record_id: Attributes.Text.ReadOnly,
-}
-
-export const baseListEntryAttributes = {
-	entry_id: Attributes.Text.ReadOnly,
-	parent_record: Attributes.RecordReference.ReadOnly,
-	created_at: Attributes.Timestamp.ReadOnly,
-	created_by: Attributes.ActorReference.ReadOnly,
-}
-
 type AttributeLike = { input: any; output: any } // TODO: fix
 
-export function createSchemas<
-	T extends Record<string, AttributeLike>,
-	B extends Record<string, AttributeLike>,
->(fields: T, baseAttributes: B) {
+export function createSchemas<T extends Record<string, AttributeLike>>(
+	fields: T,
+	idField: "record_id" | "entry_id",
+) {
+	const baseAttributes = {
+		created_at: Attributes.Timestamp.ReadOnly,
+		created_by: Attributes.ActorReference.ReadOnly,
+		[idField]: Attributes.Text.ReadOnly,
+	}
 	const allFields = { ...baseAttributes, ...fields }
 
 	const inputFields = {} as any
@@ -47,7 +39,8 @@ export function createSchemas<
 		}
 	}
 
-	type MergedFields = B & T
+	type BaseAttributes = typeof baseAttributes
+	type MergedFields = BaseAttributes & T
 
 	return {
 		input: Schema.Struct(inputFields) as Schema.Struct<{

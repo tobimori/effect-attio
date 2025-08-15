@@ -1,9 +1,5 @@
 import type { AttributeDef } from "./schemas/attribute-builder.js"
-import {
-	baseListEntryAttributes,
-	baseObjectAttributes,
-	createSchemas,
-} from "./schemas/helpers.js"
+import { createSchemas } from "./schemas/helpers.js"
 import * as StandardObjects from "./schemas/objects.js"
 
 // Objects can have fields that are either AttributeDef or have input/output properties (like .Multiple)
@@ -69,23 +65,14 @@ export function processSchemas<
 
 			if (standardFields) {
 				if (objectConfig === true) {
-					objectSchemas[name] = createSchemas(
-						standardFields,
-						baseObjectAttributes,
-					)
+					objectSchemas[name] = createSchemas(standardFields, 'record_id')
 				} else {
 					const mergedFields = { ...standardFields, ...objectConfig }
-					objectSchemas[name] = createSchemas(
-						mergedFields,
-						baseObjectAttributes,
-					)
+					objectSchemas[name] = createSchemas(mergedFields, 'record_id')
 				}
 			} else {
 				if (typeof objectConfig !== "boolean") {
-					objectSchemas[name] = createSchemas(
-						objectConfig,
-						baseObjectAttributes,
-					)
+					objectSchemas[name] = createSchemas(objectConfig, 'record_id')
 				}
 			}
 		}
@@ -102,30 +89,25 @@ export function processSchemas<
 				continue
 			}
 
-			objectSchemas[name] = createSchemas(fields, baseObjectAttributes)
+			objectSchemas[name] = createSchemas(fields, 'record_id')
 		}
 	}
 
 	// process lists
 	if (config.lists) {
 		for (const [name, listConfig] of Object.entries(config.lists)) {
-			listSchemas[name] = createSchemas(listConfig, baseListEntryAttributes)
+			listSchemas[name] = createSchemas(listConfig, 'entry_id')
 		}
 	}
 
 	return {
 		objects: objectSchemas as {
 			[K in keyof MergedObjectFields<T>]: ReturnType<
-				typeof createSchemas<
-					MergedObjectFields<T>[K],
-					typeof baseObjectAttributes
-				>
+				typeof createSchemas<MergedObjectFields<T>[K]>
 			>
 		},
 		lists: listSchemas as {
-			[K in keyof L]: ReturnType<
-				typeof createSchemas<L[K], typeof baseListEntryAttributes>
-			>
+			[K in keyof L]: ReturnType<typeof createSchemas<L[K]>>
 		},
 	}
 }

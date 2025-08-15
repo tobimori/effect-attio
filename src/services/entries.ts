@@ -3,6 +3,7 @@ import * as HttpClientResponse from "@effect/platform/HttpClientResponse"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 import { AttioHttpClient } from "../http-client.js"
+import { schemaBodyJsonNever } from "../schemas/body.js"
 import { DataStruct } from "../shared/schemas.js"
 
 const EntryId = Schema.Struct({
@@ -26,11 +27,10 @@ export class AttioEntries extends Effect.Service<AttioEntries>()(
 				 * @see https://docs.attio.com/rest-api/endpoint-reference/entries/list-entries
 				 */
 				list: Effect.fn(`entries.list`)(function* <
-					_I extends Schema.Schema.Any,
-					O extends Schema.Schema.Any,
+					T extends { input: Schema.Schema.Any; output: Schema.Schema.Any },
 				>(
 					list: string,
-					schema: { input: _I; output: O },
+					schema: T,
 					params?: {
 						filter?: Record<string, any>
 						sorts?: Array<
@@ -60,7 +60,7 @@ export class AttioEntries extends Effect.Service<AttioEntries>()(
 						}),
 						Effect.flatMap(http.execute),
 						Effect.flatMap(
-							HttpClientResponse.schemaBodyJson(
+							schemaBodyJsonNever(
 								DataStruct(
 									Schema.Array(
 										Schema.Struct({
@@ -84,10 +84,9 @@ export class AttioEntries extends Effect.Service<AttioEntries>()(
 
 // extract method signatures from service with inferred types
 export type GenericAttioEntries<
-	I extends Schema.Schema.Any,
-	O extends Schema.Schema.Any,
+	T extends { input: Schema.Schema.Any; output: Schema.Schema.Any },
 > = {
 	list: (
-		params?: Parameters<typeof AttioEntries.Service.list<I, O>>[2],
-	) => ReturnType<typeof AttioEntries.Service.list<I, O>>
+		params?: Parameters<typeof AttioEntries.Service.list<T>>[2],
+	) => ReturnType<typeof AttioEntries.Service.list<T>>
 }

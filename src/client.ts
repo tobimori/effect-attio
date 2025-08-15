@@ -13,11 +13,7 @@ import {
 	processSchemas,
 } from "./config.js"
 import { AttioHttpClient, type AttioHttpClientOptions } from "./http-client.js"
-import type {
-	baseListEntryAttributes,
-	baseObjectAttributes,
-	createSchemas,
-} from "./schemas/helpers.js"
+import type { createSchemas } from "./schemas/helpers.js"
 import type * as Objects from "./schemas/objects.js"
 import { AttioComments } from "./services/comments.js"
 import { AttioEntries, type GenericAttioEntries } from "./services/entries.js"
@@ -58,40 +54,42 @@ export const AttioClient =
 	<Self>() =>
 	<
 		Tag extends string,
-		T extends Record<string | keyof typeof Objects, ObjectConfig> = {
-			[k: string]: ObjectConfig
-		},
-		L extends Record<string, ListConfig> = {},
+		T extends AttioClientSchemas<
+			Record<string | keyof typeof Objects, ObjectConfig>,
+			Record<string, ListConfig>
+		> = AttioClientSchemas,
 	>(
 		tag: Tag,
-		config: AttioClientSchemas<T, L> = {},
+		config: T = {} as T,
 	) =>
 		genericTag<
 			Self,
 			{
-				[K in keyof MergedObjectFields<T>]: GenericAttioRecords<
+				[K in keyof MergedObjectFields<
+					T["objects"] extends Record<string, ObjectConfig> ? T["objects"] : {}
+				>]: GenericAttioRecords<
 					ReturnType<
 						typeof createSchemas<
-							MergedObjectFields<T>[K],
-							typeof baseObjectAttributes
+							MergedObjectFields<
+								T["objects"] extends Record<string, ObjectConfig>
+									? T["objects"]
+									: {}
+							>[K]
 						>
-					>["input"],
-					ReturnType<
-						typeof createSchemas<
-							MergedObjectFields<T>[K],
-							typeof baseObjectAttributes
-						>
-					>["output"]
+					>
 				>
 			} & {
 				lists: {
-					[K in keyof L]: GenericAttioEntries<
+					[K in keyof (T["lists"] extends Record<string, ListConfig>
+						? T["lists"]
+						: {})]: GenericAttioEntries<
 						ReturnType<
-							typeof createSchemas<L[K], typeof baseListEntryAttributes>
-						>["input"],
-						ReturnType<
-							typeof createSchemas<L[K], typeof baseListEntryAttributes>
-						>["output"]
+							typeof createSchemas<
+								T["lists"] extends Record<string, ListConfig>
+									? T["lists"][K]
+									: never
+							>
+						>
 					>
 				} & AttioLists
 				comments: AttioComments

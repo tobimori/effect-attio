@@ -18,7 +18,7 @@ import { AttioComments } from "./services/comments.js"
 import { AttioMeta } from "./services/meta.js"
 import { AttioNotes } from "./services/notes.js"
 import { AttioObjects } from "./services/objects.js"
-import { AttioRecords } from "./services/records.js"
+import { AttioRecords, type GenericAttioRecords } from "./services/records.js"
 import { AttioTasks } from "./services/tasks.js"
 import { AttioThreads } from "./services/threads.js"
 import { AttioWebhooks } from "./services/webhooks.js"
@@ -68,130 +68,10 @@ export const AttioClient =
 		genericTag<
 			Self,
 			{
-				[K in keyof MergedObjectFields<T>]: {
-					list: (
-						params?: ListParams,
-					) => Effect.Effect<
-						Array<
-							AttioRecord<
-								Schema.Schema.Type<
-									ReturnType<
-										typeof createSchemas<MergedObjectFields<T>[K]>
-									>["output"]
-								>
-							>
-						>,
-						never
-					>
-					assert: (
-						matchingAttribute: string,
-						data: Schema.Schema.Type<
-							ReturnType<
-								typeof createSchemas<MergedObjectFields<T>[K]>
-							>["input"]
-						>,
-					) => Effect.Effect<
-						AttioRecord<
-							Schema.Schema.Type<
-								ReturnType<
-									typeof createSchemas<MergedObjectFields<T>[K]>
-								>["output"]
-							>
-						>,
-						never
-					>
-					create: (
-						data: Schema.Schema.Type<
-							ReturnType<
-								typeof createSchemas<MergedObjectFields<T>[K]>
-							>["input"]
-						>,
-					) => Effect.Effect<
-						AttioRecord<
-							Schema.Schema.Type<
-								ReturnType<
-									typeof createSchemas<MergedObjectFields<T>[K]>
-								>["output"]
-							>
-						>,
-						never
-					>
-					get: (
-						id: string,
-					) => Effect.Effect<
-						AttioRecord<
-							Schema.Schema.Type<
-								ReturnType<
-									typeof createSchemas<MergedObjectFields<T>[K]>
-								>["output"]
-							>
-						>,
-						never
-					>
-					update: (
-						id: string,
-						data: Partial<
-							Schema.Schema.Type<
-								ReturnType<
-									typeof createSchemas<MergedObjectFields<T>[K]>
-								>["input"]
-							>
-						>,
-					) => Effect.Effect<
-						AttioRecord<
-							Schema.Schema.Type<
-								ReturnType<
-									typeof createSchemas<MergedObjectFields<T>[K]>
-								>["output"]
-							>
-						>,
-						never
-					>
-					patch: (
-						id: string,
-						data: Partial<
-							Schema.Schema.Type<
-								ReturnType<
-									typeof createSchemas<MergedObjectFields<T>[K]>
-								>["input"]
-							>
-						>,
-					) => Effect.Effect<
-						AttioRecord<
-							Schema.Schema.Type<
-								ReturnType<
-									typeof createSchemas<MergedObjectFields<T>[K]>
-								>["output"]
-							>
-						>,
-						never
-					>
-					delete: (id: string) => Effect.Effect<void, never>
-					listAttributeValues: (
-						id: string,
-						attribute: string,
-						params?: {
-							show_historic?: boolean
-							limit?: number
-							offset?: number
-						},
-					) => Effect.Effect<Array<unknown>, never>
-					listEntries: (
-						id: string,
-						params?: {
-							limit?: number
-							offset?: number
-						},
-					) => Effect.Effect<
-						Array<{
-							list_id: string
-							list_api_slug: string
-							entry_id: string
-							created_at: string
-						}>,
-						never
-					>
-				}
+				[K in keyof MergedObjectFields<T>]: GenericAttioRecords<
+					ReturnType<typeof createSchemas<MergedObjectFields<T>[K]>>["input"],
+					ReturnType<typeof createSchemas<MergedObjectFields<T>[K]>>["output"]
+				>
 			} & {
 				comments: AttioComments
 				threads: AttioThreads

@@ -3,11 +3,11 @@ import * as HttpClientResponse from "@effect/platform/HttpClientResponse"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 import {
-	ConflictErrorSchema,
+	AttioConflictErrorTransform,
+	AttioNotFoundErrorTransform,
+	AttioValidationErrorTransform,
 	mapAttioErrors,
-	NotFoundErrorSchema,
-	ValidationErrorSchema,
-} from "../errors.js"
+} from "../error-transforms.js"
 import { AttioHttpClient } from "../http-client.js"
 import { DataStruct, ObjectId, WorkspaceId } from "../shared/schemas.js"
 
@@ -76,7 +76,10 @@ export class AttioObjects extends Effect.Service<AttioObjects>()(
 							HttpClientResponse.schemaBodyJson(DataStruct(AttioObject)),
 						),
 						Effect.map((result) => result.data),
-						mapAttioErrors(ValidationErrorSchema, ConflictErrorSchema),
+						mapAttioErrors(
+							AttioValidationErrorTransform,
+							AttioConflictErrorTransform,
+						),
 					)
 				}),
 
@@ -91,7 +94,7 @@ export class AttioObjects extends Effect.Service<AttioObjects>()(
 							HttpClientResponse.schemaBodyJson(DataStruct(AttioObject)),
 						),
 						Effect.map((result) => result.data),
-						mapAttioErrors(NotFoundErrorSchema),
+						mapAttioErrors(AttioNotFoundErrorTransform),
 					)
 				}),
 
@@ -114,9 +117,9 @@ export class AttioObjects extends Effect.Service<AttioObjects>()(
 						),
 						Effect.map((result) => result.data),
 						mapAttioErrors(
-							NotFoundErrorSchema,
-							ValidationErrorSchema,
-							ConflictErrorSchema,
+							AttioNotFoundErrorTransform,
+							AttioValidationErrorTransform,
+							AttioConflictErrorTransform,
 						),
 					)
 				}),

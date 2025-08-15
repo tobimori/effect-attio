@@ -7,11 +7,14 @@ import * as Layer from "effect/Layer"
 import * as Option from "effect/Option"
 import type * as Redacted from "effect/Redacted"
 import * as Schema from "effect/Schema"
-import { RateLimitErrorSchema, UnauthorizedErrorSchema } from "./errors.js"
+import {
+	AttioRateLimitErrorTransform,
+	AttioUnauthorizedErrorTransform,
+} from "./error-transforms.js"
 
-const GlobalErrorSchema = Schema.Union(
-	UnauthorizedErrorSchema,
-	RateLimitErrorSchema,
+const GlobalErrors = Schema.Union(
+	AttioUnauthorizedErrorTransform,
+	AttioRateLimitErrorTransform,
 )
 
 export interface AttioHttpClientOptions {
@@ -20,7 +23,7 @@ export interface AttioHttpClientOptions {
 }
 
 export class AttioHttpClient extends Effect.Service<AttioHttpClient>()(
-	"@effect-attio/AttioHttpClient",
+	"AttioHttpClient",
 	{
 		scoped: Effect.fnUntraced(function* (opts: AttioHttpClientOptions) {
 			return (yield* HttpClient.HttpClient).pipe(
@@ -38,8 +41,7 @@ export class AttioHttpClient extends Effect.Service<AttioHttpClient>()(
 					(response) =>
 						Effect.gen(function* () {
 							const json = yield* response.json
-							const globalError =
-								Schema.decodeUnknownOption(GlobalErrorSchema)(json)
+							const globalError = Schema.decodeUnknownOption(GlobalErrors)(json)
 
 							if (Option.isSome(globalError)) {
 								return yield* globalError.value

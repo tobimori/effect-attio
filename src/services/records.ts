@@ -386,3 +386,49 @@ export class AttioRecords extends Effect.Service<AttioRecords>()(
 		}),
 	},
 ) {}
+
+// extract method signatures from service with inferred types
+export type GenericAttioRecords<
+	I extends Schema.Schema.Any,
+	O extends Schema.Schema.Any,
+> = {
+	list: (
+		params?: Parameters<typeof AttioRecords.Service.list<I, O>>[2],
+	) => ReturnType<typeof AttioRecords.Service.list<I, O>>
+
+	assert: (
+		matchingAttribute: string,
+		data: Schema.Schema.Type<I>,
+	) => ReturnType<typeof AttioRecords.Service.assert<I, O>>
+
+	create: (
+		data: Schema.Schema.Type<I>,
+	) => ReturnType<typeof AttioRecords.Service.create<I, O>>
+
+	get: (
+		id: string,
+	) => ReturnType<typeof AttioRecords.Service.get<I, O>>
+
+	update: (
+		id: string,
+		data: Schema.Schema.Type<I>,
+	) => ReturnType<typeof AttioRecords.Service.update<I, O>>
+
+	patch: (
+		id: string,
+		data: Schema.Schema.Type<I>,
+	) => ReturnType<typeof AttioRecords.Service.patch<I, O>>
+
+	delete: (id: string) => ReturnType<typeof AttioRecords.Service.delete>
+
+	listAttributeValues: (
+		id: string,
+		attribute: string,
+		params?: Parameters<typeof AttioRecords.Service.listAttributeValues>[3],
+	) => ReturnType<typeof AttioRecords.Service.listAttributeValues>
+
+	listEntries: (
+		id: string,
+		params?: Parameters<typeof AttioRecords.Service.listEntries>[2],
+	) => ReturnType<typeof AttioRecords.Service.listEntries>
+}

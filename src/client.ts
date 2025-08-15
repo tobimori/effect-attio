@@ -124,7 +124,7 @@ export const AttioClient =
 									lists: new Proxy(lists as any, {
 										get(target, listName: string) {
 											// check if it's a lists service method
-											if (listName in target) {
+											if (Object.hasOwn(target, listName)) {
 												return target[listName]
 											}
 
@@ -184,7 +184,7 @@ export const AttioClient =
 								{
 									get(target, resource: string) {
 										// Check if it's a specialized service
-										if (resource in target) {
+										if (Object.hasOwn(target, resource)) {
 											return target[resource]
 										}
 

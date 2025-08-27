@@ -1,5 +1,11 @@
 # effect-attio
 
+## 0.3.2
+
+### Patch Changes
+
+- 732a616: Fix timestamp decoding in API responses by using typeSchema to prevent double transformation
+
 ## 0.3.1
 
 ### Patch Changes

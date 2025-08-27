@@ -36,19 +36,6 @@ const genericTag =
 		return Object.assign(tag, members(tag as any)) as any
 	}
 
-// Record structure returned by Attio API
-// TODO: clean up (duplicated as runtime schema in records service)
-export interface AttioRecord<T> {
-	id: {
-		workspace_id: string
-		object_id: string
-		record_id: string
-	}
-	created_at: string
-	web_url: string
-	values: T
-}
-
 export const AttioClient =
 	<Self>() =>
 	<Tag extends string, T extends AttioClientSchemas = AttioClientSchemas>(

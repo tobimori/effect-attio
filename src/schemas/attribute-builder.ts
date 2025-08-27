@@ -8,8 +8,8 @@ export interface AttributeDef {
 }
 
 export const BaseAttribute = Schema.Struct({
-	active_from: Schema.String,
-	active_until: Schema.NullOr(Schema.String),
+	active_from: Schema.DateTimeUtc,
+	active_until: Schema.NullOr(Schema.DateTimeUtc),
 	created_by_actor: Actor,
 })
 
@@ -43,6 +43,11 @@ export const ApiSingleValueRequired = <A, I, R>(
 		},
 	)
 
+type EnrichedOutput<T extends Schema.Schema.Any> = Schema.extend<
+	T,
+	typeof BaseAttribute
+>
+
 type BaseAttributeVariations<
 	TInput extends Schema.Schema.Any,
 	TOutput extends Schema.Schema.Any,
@@ -50,18 +55,18 @@ type BaseAttributeVariations<
 	input: Schema.optional<TInput>
 	output: ReturnType<
 		typeof ApiSingleValue<
-			Schema.Schema.Type<TOutput>,
-			Schema.Schema.Encoded<TOutput>,
-			Schema.Schema.Context<TOutput>
+			Schema.Schema.Type<EnrichedOutput<TOutput>>,
+			Schema.Schema.Encoded<EnrichedOutput<TOutput>>,
+			Schema.Schema.Context<EnrichedOutput<TOutput>>
 		>
 	>
 	Required: {
 		input: TInput
 		output: ReturnType<
 			typeof ApiSingleValueRequired<
-				Schema.Schema.Type<TOutput>,
-				Schema.Schema.Encoded<TOutput>,
-				Schema.Schema.Context<TOutput>
+				Schema.Schema.Type<EnrichedOutput<TOutput>>,
+				Schema.Schema.Encoded<EnrichedOutput<TOutput>>,
+				Schema.Schema.Context<EnrichedOutput<TOutput>>
 			>
 		>
 	}
@@ -69,9 +74,9 @@ type BaseAttributeVariations<
 		input: Schema.Void
 		output: ReturnType<
 			typeof ApiSingleValueRequired<
-				Schema.Schema.Type<TOutput>,
-				Schema.Schema.Encoded<TOutput>,
-				Schema.Schema.Context<TOutput>
+				Schema.Schema.Type<EnrichedOutput<TOutput>>,
+				Schema.Schema.Encoded<EnrichedOutput<TOutput>>,
+				Schema.Schema.Context<EnrichedOutput<TOutput>>
 			>
 		>
 	}
@@ -83,14 +88,14 @@ type AttributeWithMultiple<
 > = BaseAttributeVariations<TInput, TOutput> & {
 	Multiple: {
 		input: Schema.optional<Schema.Array$<TInput>>
-		output: Schema.Array$<TOutput>
+		output: Schema.Array$<EnrichedOutput<TOutput>>
 		Required: {
 			input: Schema.Array$<TInput>
-			output: Schema.filter<Schema.Array$<Schema.Schema.Any>>
+			output: Schema.filter<Schema.Array$<EnrichedOutput<TOutput>>>
 		}
 		ReadOnly: {
 			input: Schema.Void
-			output: Schema.filter<Schema.Array$<TOutput>>
+			output: Schema.filter<Schema.Array$<EnrichedOutput<TOutput>>>
 		}
 	}
 }

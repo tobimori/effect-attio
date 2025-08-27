@@ -19,7 +19,7 @@ export const BaseAttribute = Schema.Struct({
 export const ApiSingleValue = <A, I, R>(itemSchema: Schema.Schema<A, I, R>) =>
 	Schema.transformOrFail(
 		Schema.Array(itemSchema).pipe(Schema.maxItems(1)),
-		Schema.NullOr(itemSchema),
+		Schema.NullOr(Schema.typeSchema(itemSchema)),
 		{
 			strict: false,
 			decode: (arr) => ParseResult.succeed(arr.length === 0 ? null : arr[0]),
@@ -35,7 +35,7 @@ export const ApiSingleValueRequired = <A, I, R>(
 ) =>
 	Schema.transformOrFail(
 		Schema.Array(itemSchema).pipe(Schema.minItems(1), Schema.maxItems(1)),
-		itemSchema,
+		Schema.typeSchema(itemSchema),
 		{
 			strict: false,
 			decode: (arr) => ParseResult.succeed(arr[0]),

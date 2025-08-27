@@ -430,38 +430,42 @@ export type GenericAttioRecords<
 	) => ReturnType<typeof AttioRecords.Service.list<TInput, TOutput>>
 
 	assert: (
-		matchingAttribute: string,
-		data: Schema.Schema.Type<TInput>,
+		matchingAttribute: Parameters<
+			typeof AttioRecords.Service.assert<TInput, TOutput>
+		>[2],
+		data: Parameters<typeof AttioRecords.Service.assert<TInput, TOutput>>[3],
 	) => ReturnType<typeof AttioRecords.Service.assert<TInput, TOutput>>
 
 	create: (
-		data: Schema.Schema.Type<TInput>,
+		data: Parameters<typeof AttioRecords.Service.create<TInput, TOutput>>[2],
 	) => ReturnType<typeof AttioRecords.Service.create<TInput, TOutput>>
 
 	get: (
-		id: string,
+		id: Parameters<typeof AttioRecords.Service.get<TInput, TOutput>>[2],
 	) => ReturnType<typeof AttioRecords.Service.get<TInput, TOutput>>
 
 	update: (
-		id: string,
-		data: Schema.Schema.Type<TInput>,
+		id: Parameters<typeof AttioRecords.Service.update<TInput, TOutput>>[2],
+		data: Parameters<typeof AttioRecords.Service.update<TInput, TOutput>>[3],
 	) => ReturnType<typeof AttioRecords.Service.update<TInput, TOutput>>
 
 	patch: (
-		id: string,
-		data: Schema.Schema.Type<TInput>,
+		id: Parameters<typeof AttioRecords.Service.patch<TInput, TOutput>>[2],
+		data: Parameters<typeof AttioRecords.Service.patch<TInput, TOutput>>[3],
 	) => ReturnType<typeof AttioRecords.Service.patch<TInput, TOutput>>
 
-	delete: (id: string) => ReturnType<typeof AttioRecords.Service.delete>
+	delete: (
+		id: Parameters<typeof AttioRecords.Service.delete>[1],
+	) => ReturnType<typeof AttioRecords.Service.delete>
 
 	listAttributeValues: (
-		id: string,
-		attribute: string,
+		id: Parameters<typeof AttioRecords.Service.listAttributeValues>[1],
+		attribute: Parameters<typeof AttioRecords.Service.listAttributeValues>[2],
 		params?: Parameters<typeof AttioRecords.Service.listAttributeValues>[3],
 	) => ReturnType<typeof AttioRecords.Service.listAttributeValues>
 
 	listEntries: (
-		id: string,
+		id: Parameters<typeof AttioRecords.Service.listEntries>[1],
 		params?: Parameters<typeof AttioRecords.Service.listEntries>[2],
 	) => ReturnType<typeof AttioRecords.Service.listEntries>
 }

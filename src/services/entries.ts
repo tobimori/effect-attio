@@ -255,9 +255,7 @@ export class AttioEntries extends Effect.Service<AttioEntries>()(
 					list: string,
 					entryId: string,
 					schema: { input: TInput; output: TOutput },
-					data: {
-						entry_values: Schema.Schema.Type<TInput>
-					},
+					data: Partial<Schema.Schema.Type<TInput>>,
 				) {
 					return yield* HttpClientRequest.put(
 						`/v2/lists/${list}/entries/${entryId}`,
@@ -326,9 +324,7 @@ export class AttioEntries extends Effect.Service<AttioEntries>()(
 					list: string,
 					entryId: string,
 					schema: { input: TInput; output: TOutput },
-					data: {
-						entry_values: Schema.Schema.Type<TInput>
-					},
+					data: Partial<Schema.Schema.Type<TInput>>,
 				) {
 					return yield* HttpClientRequest.patch(
 						`/v2/lists/${list}/entries/${entryId}`,
@@ -418,20 +414,22 @@ export type GenericAttioEntries<
 		data: Parameters<typeof AttioEntries.Service.create<TInput, TOutput>>[2],
 	) => ReturnType<typeof AttioEntries.Service.create<TInput, TOutput>>
 	get: (
-		entryId: string,
+		entryId: Parameters<typeof AttioEntries.Service.get<TInput, TOutput>>[2],
 	) => ReturnType<typeof AttioEntries.Service.get<TInput, TOutput>>
 	update: (
-		entryId: string,
+		entryId: Parameters<typeof AttioEntries.Service.update<TInput, TOutput>>[2],
 		data: Parameters<typeof AttioEntries.Service.update<TInput, TOutput>>[3],
 	) => ReturnType<typeof AttioEntries.Service.update<TInput, TOutput>>
-	delete: (entryId: string) => ReturnType<typeof AttioEntries.Service.delete>
+	delete: (
+		entryId: Parameters<typeof AttioEntries.Service.delete>[1],
+	) => ReturnType<typeof AttioEntries.Service.delete>
 	patch: (
-		entryId: string,
+		entryId: Parameters<typeof AttioEntries.Service.patch<TInput, TOutput>>[2],
 		data: Parameters<typeof AttioEntries.Service.patch<TInput, TOutput>>[3],
 	) => ReturnType<typeof AttioEntries.Service.patch<TInput, TOutput>>
 	listAttributeValues: (
-		entryId: string,
-		attribute: string,
+		entryId: Parameters<typeof AttioEntries.Service.listAttributeValues>[1],
+		attribute: Parameters<typeof AttioEntries.Service.listAttributeValues>[2],
 		params?: Parameters<typeof AttioEntries.Service.listAttributeValues>[3],
 	) => ReturnType<typeof AttioEntries.Service.listAttributeValues>
 }

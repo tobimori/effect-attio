@@ -12,6 +12,7 @@ import {
 	AttioRateLimitError,
 	AttioSystemEditError,
 	AttioUnauthorizedError,
+	AttioUniquenessConflictError,
 	AttioValidationError,
 } from "./errors.js"
 import { HttpDate } from "./shared/http-date.js"
@@ -200,6 +201,30 @@ export const AttioSystemEditErrorTransform = Schema.transform(
 			status_code: 400 as const,
 			type: "invalid_request_error" as const,
 			code: "system_edit_unauthorized" as const,
+			message: error.message,
+		}),
+	},
+)
+
+// 400 Bad Request - code: "uniqueness_conflict"
+export const AttioUniquenessConflictErrorTransform = Schema.transform(
+	Schema.Struct({
+		status_code: Schema.Literal(400),
+		type: Schema.Literal("invalid_request_error"),
+		code: Schema.Literal("uniqueness_conflict"),
+		message: Schema.String,
+	}),
+	AttioUniquenessConflictError,
+	{
+		strict: true,
+		decode: (attioError) =>
+			new AttioUniquenessConflictError({
+				message: attioError.message,
+			}),
+		encode: (error) => ({
+			status_code: 400 as const,
+			type: "invalid_request_error" as const,
+			code: "uniqueness_conflict" as const,
 			message: error.message,
 		}),
 	},

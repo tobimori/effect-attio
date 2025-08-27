@@ -7,6 +7,7 @@ import {
 	AttioMissingValueErrorTransform,
 	AttioMultipleMatchErrorTransform,
 	AttioNotFoundErrorTransform,
+	AttioUniquenessConflictErrorTransform,
 	AttioValidationErrorTransform,
 	mapAttioErrors,
 } from "../error-transforms.js"
@@ -127,6 +128,7 @@ export class AttioRecords extends Effect.Service<AttioRecords>()(
 							AttioValidationErrorTransform,
 							AttioMissingValueErrorTransform,
 							AttioMultipleMatchErrorTransform,
+							AttioUniquenessConflictErrorTransform,
 						),
 					)
 				}),
@@ -209,6 +211,7 @@ export class AttioRecords extends Effect.Service<AttioRecords>()(
 						mapAttioErrors(
 							AttioValidationErrorTransform,
 							AttioConflictErrorTransform,
+							AttioUniquenessConflictErrorTransform,
 						),
 					)
 				}),

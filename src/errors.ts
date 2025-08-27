@@ -67,6 +67,14 @@ export class AttioSystemEditError extends Schema.TaggedError<AttioSystemEditErro
 	},
 ) {}
 
+// 400 Errors - Uniqueness Conflict
+export class AttioUniquenessConflictError extends Schema.TaggedError<AttioUniquenessConflictError>()(
+	"AttioUniquenessConflictError",
+	{
+		message: Schema.String,
+	},
+) {}
+
 // 409 Errors
 export class AttioConflictError extends Schema.TaggedError<AttioConflictError>()(
 	"AttioConflictError",
@@ -110,6 +118,7 @@ export type AttioErrors =
 	| AttioFilterError
 	| AttioMultipleMatchError
 	| AttioSystemEditError
+	| AttioUniquenessConflictError
 	| AttioConflictError
 	| AttioUnauthorizedError
 	| AttioRateLimitError

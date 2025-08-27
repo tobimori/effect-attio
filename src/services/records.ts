@@ -117,9 +117,7 @@ export class AttioRecords extends Effect.Service<AttioRecords>()(
 										id: RecordId,
 										created_at: Schema.DateTimeUtc,
 										web_url: Schema.String,
-										values: Schema.Struct({
-											test: Schema.String,
-										}),
+										values: schema.output,
 									}),
 								),
 							),

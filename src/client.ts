@@ -67,7 +67,8 @@ export const AttioClient =
 								T["objects"] extends Record<string, ObjectConfig>
 									? T["objects"]
 									: {}
-							>[K]
+							>[K],
+							"record_id"
 						>
 					>["input"],
 					ReturnType<
@@ -76,7 +77,8 @@ export const AttioClient =
 								T["objects"] extends Record<string, ObjectConfig>
 									? T["objects"]
 									: {}
-							>[K]
+							>[K],
+							"record_id"
 						>
 					>["output"]
 				>
@@ -89,9 +91,18 @@ export const AttioClient =
 							typeof createSchemas<
 								T["lists"] extends Record<string, ListConfig>
 									? T["lists"][K]
-									: never
+									: never,
+								"entry_id"
 							>
-						>
+						>["input"],
+						ReturnType<
+							typeof createSchemas<
+								T["lists"] extends Record<string, ListConfig>
+									? T["lists"][K]
+									: never,
+								"entry_id"
+							>
+						>["output"]
 					>
 				} & AttioLists
 				comments: AttioComments

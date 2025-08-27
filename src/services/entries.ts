@@ -36,10 +36,11 @@ export class AttioEntries extends Effect.Service<AttioEntries>()(
 				 * @see https://docs.attio.com/rest-api/endpoint-reference/entries/list-entries
 				 */
 				list: Effect.fn(`entries.list`)(function* <
-					T extends { input: Schema.Schema.Any; output: Schema.Schema.Any },
+					TInput extends Schema.Schema.Any,
+					TOutput extends Schema.Struct.Field,
 				>(
 					list: string,
-					schema: T,
+					schema: { input: TInput; output: TOutput },
 					params?: {
 						filter?: Record<string, any>
 						sorts?: Array<
@@ -102,14 +103,15 @@ export class AttioEntries extends Effect.Service<AttioEntries>()(
 				 * @see https://docs.attio.com/rest-api/endpoint-reference/entries/assert-a-list-entry-by-parent
 				 */
 				assert: Effect.fn(`entries.assert`)(function* <
-					T extends { input: Schema.Schema.Any; output: Schema.Schema.Any },
+					TInput extends Schema.Schema.Any,
+					TOutput extends Schema.Struct.Field,
 				>(
 					list: string,
-					schema: T,
+					schema: { input: TInput; output: TOutput },
 					data: {
 						parent_record_id: string
 						parent_object: string
-						entry_values: Schema.Schema.Type<T["input"]>
+						entry_values: Schema.Schema.Type<TInput>
 					},
 				) {
 					return yield* HttpClientRequest.put(`/v2/lists/${list}/entries`).pipe(
@@ -154,14 +156,15 @@ export class AttioEntries extends Effect.Service<AttioEntries>()(
 				 * @see https://docs.attio.com/rest-api/endpoint-reference/entries/create-an-entry-add-record-to-list
 				 */
 				create: Effect.fn(`entries.create`)(function* <
-					T extends { input: Schema.Schema.Any; output: Schema.Schema.Any },
+					TInput extends Schema.Schema.Any,
+					TOutput extends Schema.Struct.Field,
 				>(
 					list: string,
-					schema: T,
+					schema: { input: TInput; output: TOutput },
 					data: {
 						parent_record_id: string
 						parent_object: string
-						entry_values: Schema.Schema.Type<T["input"]>
+						entry_values: Schema.Schema.Type<TInput>
 					},
 				) {
 					return yield* HttpClientRequest.post(
@@ -207,8 +210,13 @@ export class AttioEntries extends Effect.Service<AttioEntries>()(
 				 * @see https://docs.attio.com/rest-api/endpoint-reference/entries/get-a-list-entry
 				 */
 				get: Effect.fn(`entries.get`)(function* <
-					T extends { output: Schema.Schema.Any },
-				>(list: string, schema: T, entryId: string) {
+					TInput extends Schema.Schema.Any,
+					TOutput extends Schema.Struct.Field,
+				>(
+					list: string,
+					schema: { input: TInput; output: TOutput },
+					entryId: string,
+				) {
 					return yield* http.get(`/v2/lists/${list}/entries/${entryId}`).pipe(
 						Effect.flatMap(
 							schemaBodyJsonNever(
@@ -241,13 +249,14 @@ export class AttioEntries extends Effect.Service<AttioEntries>()(
 				 * @see https://docs.attio.com/rest-api/endpoint-reference/entries/update-a-list-entry-overwrite-multiselect-values
 				 */
 				update: Effect.fn(`entries.update`)(function* <
-					T extends { input: Schema.Schema.Any; output: Schema.Schema.Any },
+					TInput extends Schema.Schema.Any,
+					TOutput extends Schema.Struct.Field,
 				>(
 					list: string,
 					entryId: string,
-					schema: T,
+					schema: { input: TInput; output: TOutput },
 					data: {
-						entry_values: Schema.Schema.Type<T["input"]>
+						entry_values: Schema.Schema.Type<TInput>
 					},
 				) {
 					return yield* HttpClientRequest.put(
@@ -311,13 +320,14 @@ export class AttioEntries extends Effect.Service<AttioEntries>()(
 				 * @see https://docs.attio.com/rest-api/endpoint-reference/entries/update-a-list-entry-append-multiselect-values
 				 */
 				patch: Effect.fn(`entries.patch`)(function* <
-					T extends { input: Schema.Schema.Any; output: Schema.Schema.Any },
+					TInput extends Schema.Schema.Any,
+					TOutput extends Schema.Struct.Field,
 				>(
 					list: string,
 					entryId: string,
-					schema: T,
+					schema: { input: TInput; output: TOutput },
 					data: {
-						entry_values: Schema.Schema.Type<T["input"]>
+						entry_values: Schema.Schema.Type<TInput>
 					},
 				) {
 					return yield* HttpClientRequest.patch(
@@ -395,27 +405,30 @@ export class AttioEntries extends Effect.Service<AttioEntries>()(
 
 // extract method signatures from service with inferred types
 export type GenericAttioEntries<
-	T extends { input: Schema.Schema.Any; output: Schema.Schema.Any },
+	TInput extends Schema.Schema.Any,
+	TOutput extends Schema.Struct.Field,
 > = {
 	list: (
-		params?: Parameters<typeof AttioEntries.Service.list<T>>[2],
-	) => ReturnType<typeof AttioEntries.Service.list<T>>
+		params?: Parameters<typeof AttioEntries.Service.list<TInput, TOutput>>[2],
+	) => ReturnType<typeof AttioEntries.Service.list<TInput, TOutput>>
 	assert: (
-		data: Parameters<typeof AttioEntries.Service.assert<T>>[2],
-	) => ReturnType<typeof AttioEntries.Service.assert<T>>
+		data: Parameters<typeof AttioEntries.Service.assert<TInput, TOutput>>[2],
+	) => ReturnType<typeof AttioEntries.Service.assert<TInput, TOutput>>
 	create: (
-		data: Parameters<typeof AttioEntries.Service.create<T>>[2],
-	) => ReturnType<typeof AttioEntries.Service.create<T>>
-	get: (entryId: string) => ReturnType<typeof AttioEntries.Service.get<T>>
+		data: Parameters<typeof AttioEntries.Service.create<TInput, TOutput>>[2],
+	) => ReturnType<typeof AttioEntries.Service.create<TInput, TOutput>>
+	get: (
+		entryId: string,
+	) => ReturnType<typeof AttioEntries.Service.get<TInput, TOutput>>
 	update: (
 		entryId: string,
-		data: Parameters<typeof AttioEntries.Service.update<T>>[3],
-	) => ReturnType<typeof AttioEntries.Service.update<T>>
+		data: Parameters<typeof AttioEntries.Service.update<TInput, TOutput>>[3],
+	) => ReturnType<typeof AttioEntries.Service.update<TInput, TOutput>>
 	delete: (entryId: string) => ReturnType<typeof AttioEntries.Service.delete>
 	patch: (
 		entryId: string,
-		data: Parameters<typeof AttioEntries.Service.patch<T>>[3],
-	) => ReturnType<typeof AttioEntries.Service.patch<T>>
+		data: Parameters<typeof AttioEntries.Service.patch<TInput, TOutput>>[3],
+	) => ReturnType<typeof AttioEntries.Service.patch<TInput, TOutput>>
 	listAttributeValues: (
 		entryId: string,
 		attribute: string,

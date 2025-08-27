@@ -103,11 +103,11 @@ export function processSchemas<
 	return {
 		objects: objectSchemas as {
 			[K in keyof MergedObjectFields<T>]: ReturnType<
-				typeof createSchemas<MergedObjectFields<T>[K]>
+				typeof createSchemas<MergedObjectFields<T>[K], "record_id">
 			>
 		},
 		lists: listSchemas as {
-			[K in keyof L]: ReturnType<typeof createSchemas<L[K]>>
+			[K in keyof L]: ReturnType<typeof createSchemas<L[K], "entry_id">>
 		},
 	}
 }

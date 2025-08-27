@@ -19,7 +19,7 @@ export const BaseAttribute = Schema.Struct({
 export const ApiSingleValue = <A, I, R>(itemSchema: Schema.Schema<A, I, R>) =>
 	Schema.transformOrFail(
 		Schema.Array(itemSchema).pipe(Schema.maxItems(1)),
-		Schema.NullOr(Schema.typeSchema(itemSchema)),
+		Schema.NullOr(itemSchema),
 		{
 			strict: false,
 			decode: (arr) => ParseResult.succeed(arr.length === 0 ? null : arr[0]),
@@ -35,7 +35,7 @@ export const ApiSingleValueRequired = <A, I, R>(
 ) =>
 	Schema.transformOrFail(
 		Schema.Array(itemSchema).pipe(Schema.minItems(1), Schema.maxItems(1)),
-		Schema.typeSchema(itemSchema),
+		itemSchema,
 		{
 			strict: false,
 			decode: (arr) => ParseResult.succeed(arr[0]),
@@ -43,49 +43,84 @@ export const ApiSingleValueRequired = <A, I, R>(
 		},
 	)
 
-type BaseAttributeVariations<T extends AttributeDef> = {
-	input: Schema.optional<T["input"]>
-	output: ReturnType<typeof ApiSingleValue<T["output"], any, any>>
+type BaseAttributeVariations<
+	TInput extends Schema.Schema.Any,
+	TOutput extends Schema.Schema.Any,
+> = {
+	input: Schema.optional<TInput>
+	output: ReturnType<
+		typeof ApiSingleValue<
+			Schema.Schema.Type<TOutput>,
+			Schema.Schema.Encoded<TOutput>,
+			Schema.Schema.Context<TOutput>
+		>
+	>
 	Required: {
-		input: T["input"]
-		output: ReturnType<typeof ApiSingleValueRequired<T["output"], any, any>>
+		input: TInput
+		output: ReturnType<
+			typeof ApiSingleValueRequired<
+				Schema.Schema.Type<TOutput>,
+				Schema.Schema.Encoded<TOutput>,
+				Schema.Schema.Context<TOutput>
+			>
+		>
 	}
 	ReadOnly: {
 		input: Schema.Void
-		output: ReturnType<typeof ApiSingleValueRequired<T["output"], any, any>>
+		output: ReturnType<
+			typeof ApiSingleValueRequired<
+				Schema.Schema.Type<TOutput>,
+				Schema.Schema.Encoded<TOutput>,
+				Schema.Schema.Context<TOutput>
+			>
+		>
 	}
 }
 
-type AttributeWithMultiple<T extends AttributeDef> =
-	BaseAttributeVariations<T> & {
-		Multiple: {
-			input: Schema.optional<Schema.Array$<T["input"]>>
-			output: Schema.Array$<T["output"]>
-			Required: {
-				input: Schema.Array$<T["input"]>
-				output: Schema.filter<Schema.Array$<Schema.Schema.Any>>
-			}
-			ReadOnly: {
-				input: Schema.Void
-				output: Schema.filter<Schema.Array$<T["output"]>>
-			}
+type AttributeWithMultiple<
+	TInput extends Schema.Schema.Any,
+	TOutput extends Schema.Schema.Any,
+> = BaseAttributeVariations<TInput, TOutput> & {
+	Multiple: {
+		input: Schema.optional<Schema.Array$<TInput>>
+		output: Schema.Array$<TOutput>
+		Required: {
+			input: Schema.Array$<TInput>
+			output: Schema.filter<Schema.Array$<Schema.Schema.Any>>
+		}
+		ReadOnly: {
+			input: Schema.Void
+			output: Schema.filter<Schema.Array$<TOutput>>
 		}
 	}
+}
 
 /**
  * Creates an attribute with variations
  */
-export function makeAttribute<T extends AttributeDef>(
-	base: T,
-): BaseAttributeVariations<T>
-export function makeAttribute<T extends AttributeDef>(
-	base: T,
+export function makeAttribute<
+	TInput extends Schema.Schema.Any,
+	TOutput extends Schema.Schema.Any,
+>(base: {
+	input: TInput
+	output: TOutput
+}): BaseAttributeVariations<TInput, TOutput>
+export function makeAttribute<
+	TInput extends Schema.Schema.Any,
+	TOutput extends Schema.Schema.Any,
+>(
+	base: { input: TInput; output: TOutput },
 	options: { multiple: true },
-): AttributeWithMultiple<T>
-export function makeAttribute<T extends AttributeDef>(
-	base: T,
+): AttributeWithMultiple<TInput, TOutput>
+export function makeAttribute<
+	TInput extends Schema.Schema.Any,
+	TOutput extends Schema.Schema.Any,
+>(
+	base: { input: TInput; output: TOutput },
 	options?: { multiple?: boolean },
-): BaseAttributeVariations<T> | AttributeWithMultiple<T> {
+):
+	| BaseAttributeVariations<TInput, TOutput>
+	| AttributeWithMultiple<TInput, TOutput> {
 	const enrichedOutput = Schema.extend(base.output, BaseAttribute)
 
 	const result = Object.assign(
@@ -115,11 +150,15 @@ export function makeAttribute<T extends AttributeDef>(
 				{
 					Required: {
 						input: Schema.Array(base.input),
-						output: Schema.Array(enrichedOutput).pipe(Schema.minItems(1)),
+						output: Schema.Array(enrichedOutput).pipe(
+							Schema.minItems(1) as any,
+						),
 					},
 					ReadOnly: {
 						input: Schema.Void,
-						output: Schema.Array(enrichedOutput).pipe(Schema.minItems(1)),
+						output: Schema.Array(enrichedOutput).pipe(
+							Schema.minItems(1) as any,
+						),
 					},
 				},
 			),

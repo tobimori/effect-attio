@@ -12,9 +12,12 @@ export const OptionalAttribute = <T extends AttributeDef>(field: T) => ({
 
 type AttributeLike = { input: any; output: any } // TODO: fix
 
-export function createSchemas<T extends Record<string, AttributeLike>>(
+export function createSchemas<
+	T extends Record<string, AttributeLike>,
+	IdField extends "record_id" | "entry_id"
+>(
 	fields: T,
-	idField: "record_id" | "entry_id",
+	idField: IdField,
 ) {
 	const baseAttributes = {
 		created_at: Attributes.Timestamp.ReadOnly,
@@ -39,7 +42,11 @@ export function createSchemas<T extends Record<string, AttributeLike>>(
 		}
 	}
 
-	type BaseAttributes = typeof baseAttributes
+	type BaseAttributes = {
+		created_at: typeof Attributes.Timestamp.ReadOnly
+		created_by: typeof Attributes.ActorReference.ReadOnly
+	} & Record<IdField, typeof Attributes.Text.ReadOnly>
+	
 	type MergedFields = BaseAttributes & T
 
 	return {

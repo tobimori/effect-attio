@@ -629,7 +629,9 @@ export const Select = makeAttribute(
  * @example
  * const priority = SelectWith("low", "medium", "high")
  */
-export const SelectWith = (...options: string[]) =>
+export const SelectWith = <const T extends readonly [string, ...string[]]>(
+	...options: T
+) =>
 	makeAttribute(
 		{
 			input: Schema.Literal(...options),
@@ -642,7 +644,7 @@ export const SelectWith = (...options: string[]) =>
 						attribute_id: Schema.UUID,
 						option_id: Schema.UUID,
 					}),
-					title: Schema.String,
+					title: Schema.Literal(...options),
 					is_archived: Schema.Boolean,
 				}),
 			}),

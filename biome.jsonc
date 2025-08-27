@@ -2,18 +2,18 @@
 	"$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
 	"javascript": {
 		"formatter": {
-			"semicolons": "asNeeded",
-		},
+			"semicolons": "asNeeded"
+		}
 	},
 	"linter": {
 		"rules": {
 			"suspicious": {
 				"noExplicitAny": "off",
-				"noShadowRestrictedNames": "off",
+				"noShadowRestrictedNames": "off"
 			},
 			"performance": {
-				"noDynamicNamespaceImportAccess": "off",
-			},
-		},
-	},
+				"noDynamicNamespaceImportAccess": "off"
+			}
+		}
+	}
 }

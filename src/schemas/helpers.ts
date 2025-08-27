@@ -14,11 +14,8 @@ type AttributeLike = { input: any; output: any } // TODO: fix
 
 export function createSchemas<
 	T extends Record<string, AttributeLike>,
-	IdField extends "record_id" | "entry_id"
->(
-	fields: T,
-	idField: IdField,
-) {
+	IdField extends "record_id" | "entry_id",
+>(fields: T, idField: IdField) {
 	const baseAttributes = {
 		created_at: Attributes.Timestamp.ReadOnly,
 		created_by: Attributes.ActorReference.ReadOnly,
@@ -46,7 +43,7 @@ export function createSchemas<
 		created_at: typeof Attributes.Timestamp.ReadOnly
 		created_by: typeof Attributes.ActorReference.ReadOnly
 	} & Record<IdField, typeof Attributes.Text.ReadOnly>
-	
+
 	type MergedFields = BaseAttributes & T
 
 	return {

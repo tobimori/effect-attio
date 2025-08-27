@@ -71,7 +71,7 @@ export class AttioWebhooks extends Effect.Service<AttioWebhooks>()(
 					params?: Schema.Schema.Type<typeof WebhookListParams>,
 				) {
 					return yield* HttpClientRequest.get("/v2/webhooks").pipe(
-						HttpClientRequest.appendUrlParams(params),
+						HttpClientRequest.appendUrlParams(params ?? {}),
 						http.execute,
 						Effect.flatMap(
 							HttpClientResponse.schemaBodyJson(

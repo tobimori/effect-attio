@@ -46,7 +46,7 @@ export class AttioThreads extends Effect.Service<AttioThreads>()(
 					params?: Schema.Schema.Type<typeof ThreadListParams>,
 				) {
 					return yield* HttpClientRequest.get("/v2/threads").pipe(
-						HttpClientRequest.appendUrlParams(params),
+						HttpClientRequest.appendUrlParams(params ?? {}),
 						http.execute,
 						Effect.flatMap(
 							HttpClientResponse.schemaBodyJson(

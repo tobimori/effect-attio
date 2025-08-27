@@ -151,8 +151,8 @@ export const AttioClient =
 											// check if we have a schema for this list
 											const listSchema =
 												schemas.lists[listName as keyof typeof schemas.lists]
-											const input = listSchema.input ?? Schema.Any
-											const output = listSchema.output ?? Schema.Any
+											const input = listSchema?.input ?? Schema.Any
+											const output = listSchema?.output ?? Schema.Any
 
 											return {
 												list: (params?: any) =>
@@ -210,8 +210,8 @@ export const AttioClient =
 
 										const schema =
 											schemas.objects[resource as keyof typeof schemas.objects]
-										const input = schema.input ?? Schema.Any
-										const output = schema.output ?? Schema.Any
+										const input = schema?.input ?? Schema.Any
+										const output = schema?.output ?? Schema.Any
 
 										return {
 											list: (params?: any) =>

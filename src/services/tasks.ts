@@ -3,9 +3,9 @@ import * as HttpClientResponse from "@effect/platform/HttpClientResponse"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 import {
-	mapAttioErrors,
-	AttioValidationErrorTransform,
 	AttioNotFoundErrorTransform,
+	AttioValidationErrorTransform,
+	mapAttioErrors,
 } from "../error-transforms.js"
 import { AttioHttpClient } from "../http-client.js"
 import { DateTimeISOString } from "../shared/datetime-input.js"
@@ -71,7 +71,7 @@ export class AttioTasks extends Effect.Service<AttioTasks>()("AttioTasks", {
 				params?: Schema.Schema.Type<typeof TaskListParams>,
 			) {
 				return yield* HttpClientRequest.get("/v2/tasks").pipe(
-					HttpClientRequest.appendUrlParams(params),
+					HttpClientRequest.appendUrlParams(params ?? {}),
 					http.execute,
 					Effect.flatMap(
 						HttpClientResponse.schemaBodyJson(DataStruct(Schema.Array(Task))),

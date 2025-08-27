@@ -20,20 +20,22 @@
 		"sdk",
 		"typescript"
 	],
-	"publishConfig": {
-		"access": "public",
-		"directory": "dist"
-	},
+	"files": [
+		"dist"
+	],
+	"main": "dist/index.js",
 	"exports": {
-		"./package.json": "./package.json",
-		".": "./src/index.ts",
-		"./*": "./src/*.ts"
+		".": "./dist/index.js",
+		"./*": "./dist/*.js"
 	},
 	"scripts": {
-		"build": "pnpm clean && tsc -b tsconfig.build.json && cp -r src dist/src && cp package.json README.md LICENSE dist/",
-		"check": "tsc -b tsconfig.json",
-		"clean": "rm -rf dist .tsbuildinfo",
-		"release": "pnpm build && pnpm publish"
+		"build": "tsc",
+		"fix": "bun biome check --fix",
+		"ci": "bun run fix && bun run build",
+		"prepublishOnly": "bun run ci",
+		"local-release": "changeset version && changeset publish",
+		"changeset": "changeset",
+		"release": "bun run build && changeset publish"
 	},
 	"peerDependencies": {
 		"@effect/platform": "^0.90.2",
@@ -41,6 +43,7 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.2.0",
+		"@changesets/cli": "^2.29.6",
 		"@effect/language-service": "^0.35.2",
 		"@effect/platform-browser": "^0.70.0",
 		"@effect/platform-bun": "^0.78.0",

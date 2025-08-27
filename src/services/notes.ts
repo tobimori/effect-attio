@@ -56,7 +56,7 @@ export class AttioNotes extends Effect.Service<AttioNotes>()("AttioNotes", {
 				params?: Schema.Schema.Type<typeof NoteListParams>,
 			) {
 				return yield* HttpClientRequest.get("/v2/notes").pipe(
-					HttpClientRequest.appendUrlParams(params),
+					HttpClientRequest.appendUrlParams(params ?? {}),
 					http.execute,
 					Effect.flatMap(
 						HttpClientResponse.schemaBodyJson(DataStruct(Schema.Array(Note))),

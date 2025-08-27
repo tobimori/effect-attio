@@ -69,7 +69,16 @@ export const AttioClient =
 									: {}
 							>[K]
 						>
-					>
+					>["input"],
+					ReturnType<
+						typeof createSchemas<
+							MergedObjectFields<
+								T["objects"] extends Record<string, ObjectConfig>
+									? T["objects"]
+									: {}
+							>[K]
+						>
+					>["output"]
 				>
 			} & {
 				lists: {

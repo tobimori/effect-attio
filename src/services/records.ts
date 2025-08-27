@@ -35,10 +35,11 @@ export class AttioRecords extends Effect.Service<AttioRecords>()(
 				 * @see https://docs.attio.com/rest-api/endpoint-reference/records/list-records
 				 */
 				list: Effect.fn(`record.list`)(function* <
-					T extends { input: Schema.Schema.Any; output: Schema.Schema.Any },
+					TInput extends Schema.Schema.Any,
+					TOutput extends Schema.Struct.Field,
 				>(
 					object: string,
-					schema: T,
+					schema: { input: TInput; output: TOutput },
 					params?: {
 						filter?: Record<string, any>
 						sorts?: Array<{
@@ -90,12 +91,13 @@ export class AttioRecords extends Effect.Service<AttioRecords>()(
 				 * @see https://docs.attio.com/rest-api/endpoint-reference/records/create-or-update-a-record
 				 */
 				assert: Effect.fn(`record.assert`)(function* <
-					T extends { input: Schema.Schema.Any; output: Schema.Schema.Any },
+					TInput extends Schema.Schema.Any,
+					TOutput extends Schema.Struct.Field,
 				>(
 					object: string,
-					schema: T,
+					schema: { input: TInput; output: TOutput },
 					matchingAttribute: string,
-					data: Schema.Schema.Type<T["input"]>,
+					data: Schema.Schema.Type<TInput>,
 				) {
 					return yield* HttpClientRequest.put(
 						`/v2/objects/${object}/records`,
@@ -115,7 +117,9 @@ export class AttioRecords extends Effect.Service<AttioRecords>()(
 										id: RecordId,
 										created_at: Schema.DateTimeUtc,
 										web_url: Schema.String,
-										values: schema.output,
+										values: Schema.Struct({
+											test: Schema.String,
+										}),
 									}),
 								),
 							),
@@ -139,8 +143,13 @@ export class AttioRecords extends Effect.Service<AttioRecords>()(
 				 * @see https://docs.attio.com/rest-api/endpoint-reference/records/get-a-record
 				 */
 				get: Effect.fn(`record.get`)(function* <
-					T extends { input: Schema.Schema.Any; output: Schema.Schema.Any },
-				>(object: string, schema: T, recordId: string) {
+					TInput extends Schema.Schema.Any,
+					TOutput extends Schema.Struct.Field,
+				>(
+					object: string,
+					schema: { input: TInput; output: TOutput },
+					recordId: string,
+				) {
 					return yield* http
 						.get(`/v2/objects/${object}/records/${recordId}`)
 						.pipe(
@@ -172,8 +181,13 @@ export class AttioRecords extends Effect.Service<AttioRecords>()(
 				 * @see https://docs.attio.com/rest-api/endpoint-reference/records/create-a-record
 				 */
 				create: Effect.fn(`record.create`)(function* <
-					T extends { input: Schema.Schema.Any; output: Schema.Schema.Any },
-				>(object: string, schema: T, data: Schema.Schema.Type<T["input"]>) {
+					TInput extends Schema.Schema.Any,
+					TOutput extends Schema.Struct.Field,
+				>(
+					object: string,
+					schema: { input: TInput; output: TOutput },
+					data: Schema.Schema.Type<TInput>,
+				) {
 					return yield* HttpClientRequest.post(
 						`/v2/objects/${object}/records`,
 					).pipe(
@@ -213,12 +227,13 @@ export class AttioRecords extends Effect.Service<AttioRecords>()(
 				 * @see https://docs.attio.com/rest-api/endpoint-reference/records/update-a-record-overwrite-multiselect-values
 				 */
 				update: Effect.fn(`record.update`)(function* <
-					T extends { input: Schema.Schema.Any; output: Schema.Schema.Any },
+					TInput extends Schema.Schema.Any,
+					TOutput extends Schema.Struct.Field,
 				>(
 					object: string,
-					schema: T,
+					schema: { input: TInput; output: TOutput },
 					recordId: string,
-					data: Partial<Schema.Schema.Type<T["input"]>>,
+					data: Partial<Schema.Schema.Type<TInput>>,
 				) {
 					return yield* HttpClientRequest.put(
 						`/v2/objects/${object}/records/${recordId}`,
@@ -264,12 +279,13 @@ export class AttioRecords extends Effect.Service<AttioRecords>()(
 				 * @see https://docs.attio.com/rest-api/endpoint-reference/records/update-a-record-append-multiselect-values
 				 */
 				patch: Effect.fn(`record.patch`)(function* <
-					T extends { input: Schema.Schema.Any; output: Schema.Schema.Any },
+					TInput extends Schema.Schema.Any,
+					TOutput extends Schema.Struct.Field,
 				>(
 					object: string,
-					schema: T,
+					schema: { input: TInput; output: TOutput },
 					recordId: string,
-					data: Partial<Schema.Schema.Type<T["input"]>>,
+					data: Partial<Schema.Schema.Type<TInput>>,
 				) {
 					return yield* HttpClientRequest.patch(
 						`/v2/objects/${object}/records/${recordId}`,
@@ -408,32 +424,35 @@ export class AttioRecords extends Effect.Service<AttioRecords>()(
 
 // extract method signatures from service with inferred types
 export type GenericAttioRecords<
-	T extends { input: Schema.Schema.Any; output: Schema.Schema.Any },
+	TInput extends Schema.Schema.Any,
+	TOutput extends Schema.Struct.Field,
 > = {
 	list: (
-		params?: Parameters<typeof AttioRecords.Service.list<T>>[2],
-	) => ReturnType<typeof AttioRecords.Service.list<T>>
+		params?: Parameters<typeof AttioRecords.Service.list<TInput, TOutput>>[2],
+	) => ReturnType<typeof AttioRecords.Service.list<TInput, TOutput>>
 
 	assert: (
 		matchingAttribute: string,
-		data: Schema.Schema.Type<T["input"]>,
-	) => ReturnType<typeof AttioRecords.Service.assert<T>>
+		data: Schema.Schema.Type<TInput>,
+	) => ReturnType<typeof AttioRecords.Service.assert<TInput, TOutput>>
 
 	create: (
-		data: Schema.Schema.Type<T["input"]>,
-	) => ReturnType<typeof AttioRecords.Service.create<T>>
+		data: Schema.Schema.Type<TInput>,
+	) => ReturnType<typeof AttioRecords.Service.create<TInput, TOutput>>
 
-	get: (id: string) => ReturnType<typeof AttioRecords.Service.get<T>>
+	get: (
+		id: string,
+	) => ReturnType<typeof AttioRecords.Service.get<TInput, TOutput>>
 
 	update: (
 		id: string,
-		data: Schema.Schema.Type<T["input"]>,
-	) => ReturnType<typeof AttioRecords.Service.update<T>>
+		data: Schema.Schema.Type<TInput>,
+	) => ReturnType<typeof AttioRecords.Service.update<TInput, TOutput>>
 
 	patch: (
 		id: string,
-		data: Schema.Schema.Type<T["input"]>,
-	) => ReturnType<typeof AttioRecords.Service.patch<T>>
+		data: Schema.Schema.Type<TInput>,
+	) => ReturnType<typeof AttioRecords.Service.patch<TInput, TOutput>>
 
 	delete: (id: string) => ReturnType<typeof AttioRecords.Service.delete>
 

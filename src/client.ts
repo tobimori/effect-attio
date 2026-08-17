@@ -13,6 +13,7 @@ import {
 } from "./config.js"
 import { AttioHttpClient, type AttioHttpClientOptions } from "./http-client.js"
 import type { CreatedSchemas } from "./schemas/helpers.js"
+import type { AttributeDef } from "./schemas/attribute-builder.js"
 import { AttioComments } from "./services/comments.js"
 import { AttioEntries, type GenericAttioEntries } from "./services/entries.js"
 import { AttioLists } from "./services/lists.js"
@@ -42,13 +43,18 @@ type AttioClientShape<T extends AttioClientSchemas> = {
 		CreatedSchemas<
 			MergedObjectFields<ConfiguredObjects<T>>[K],
 			"record_id"
-		>["output"]
+		>["output"],
+		CreatedSchemas<
+			MergedObjectFields<ConfiguredObjects<T>>[K],
+			"record_id"
+		>["fields"]
 	>
 } & {
 	lists: {
 		[K in keyof ConfiguredLists<T>]: GenericAttioEntries<
 			CreatedSchemas<ConfiguredLists<T>[K], "entry_id">["input"],
-			CreatedSchemas<ConfiguredLists<T>[K], "entry_id">["output"]
+			CreatedSchemas<ConfiguredLists<T>[K], "entry_id">["output"],
+			CreatedSchemas<ConfiguredLists<T>[K], "entry_id">["fields"]
 		>
 	} & AttioLists
 	comments: AttioComments
@@ -177,6 +183,11 @@ export const AttioClient: <Self>() => <
 														entryId,
 														attribute,
 														params,
+														(
+															listSchema?.fields as
+																| Record<string, AttributeDef>
+																| undefined
+														)?.[attribute]?.value ?? Schema.Unknown,
 													),
 											}
 										},
@@ -237,6 +248,11 @@ export const AttioClient: <Self>() => <
 													id,
 													attribute,
 													params,
+													(
+														schema?.fields as
+															| Record<string, AttributeDef>
+															| undefined
+													)?.[attribute]?.value ?? Schema.Unknown,
 												),
 
 											listEntries: (

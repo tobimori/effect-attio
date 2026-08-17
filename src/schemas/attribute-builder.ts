@@ -7,6 +7,7 @@ import { Actor } from "../shared/schemas.js"
 export interface AttributeDef {
 	input: Schema.Top
 	output: Schema.Top
+	value?: Schema.Top
 	readonly referenceTarget?: string
 }
 
@@ -133,13 +134,16 @@ type BaseAttributeVariations<
 > = {
 	input: Schema.optional<TInput>
 	output: ReturnType<typeof ApiSingleValue<EnrichedOutput<TOutput>>>
+	value: EnrichedOutput<TOutput>
 	Required: {
 		input: TInput
 		output: ReturnType<typeof ApiSingleValueRequired<EnrichedOutput<TOutput>>>
+		value: EnrichedOutput<TOutput>
 	}
 	ReadOnly: {
 		input: Schema.Void
 		output: ReturnType<typeof ApiSingleValueRequired<EnrichedOutput<TOutput>>>
+		value: EnrichedOutput<TOutput>
 	}
 }
 
@@ -150,13 +154,16 @@ type AttributeWithMultiple<
 	Multiple: {
 		input: Schema.optional<Schema.$Array<TInput>>
 		output: Schema.$Array<EnrichedOutput<TOutput>>
+		value: EnrichedOutput<TOutput>
 		Required: {
 			input: Schema.$Array<TInput>
 			output: Schema.$Array<EnrichedOutput<TOutput>>
+			value: EnrichedOutput<TOutput>
 		}
 		ReadOnly: {
 			input: Schema.Void
 			output: Schema.$Array<EnrichedOutput<TOutput>>
+			value: EnrichedOutput<TOutput>
 		}
 	}
 }
@@ -193,15 +200,18 @@ export function makeAttribute<
 		{
 			input: Schema.optional(base.input),
 			output: ApiSingleValue(enrichedOutput),
+			value: enrichedOutput,
 		},
 		{
 			Required: {
 				input: base.input,
 				output: ApiSingleValueRequired(enrichedOutput),
+				value: enrichedOutput,
 			},
 			ReadOnly: {
 				input: Schema.Void,
 				output: ApiSingleValueRequired(enrichedOutput),
+				value: enrichedOutput,
 			},
 		},
 	)
@@ -212,15 +222,18 @@ export function makeAttribute<
 				{
 					input: Schema.optional(Schema.Array(base.input)),
 					output: Schema.Array(enrichedOutput),
+					value: enrichedOutput,
 				},
 				{
 					Required: {
 						input: Schema.Array(base.input),
 						output: Schema.Array(enrichedOutput).check(Schema.isMinLength(1)),
+						value: enrichedOutput,
 					},
 					ReadOnly: {
 						input: Schema.Void,
 						output: Schema.Array(enrichedOutput).check(Schema.isMinLength(1)),
+						value: enrichedOutput,
 					},
 				},
 			),

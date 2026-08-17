@@ -16,6 +16,7 @@ import {
 	mapAttioErrors,
 } from "../error-transforms.js"
 import { AttioHttpClient } from "../http-client.js"
+import type { AttributeDef } from "../schemas/attribute-builder.js"
 import { DataStruct, Uuid } from "../shared/schemas.js"
 
 const RecordId = Schema.Struct({
@@ -23,6 +24,12 @@ const RecordId = Schema.Struct({
 	object_id: Uuid,
 	record_id: Uuid,
 })
+
+type AttributeValueSchema<T extends AttributeDef> = T extends {
+	value: infer Value extends Schema.Top
+}
+	? Value
+	: typeof Schema.Unknown
 
 const makeAttioRecords = Effect.gen(function* () {
 	const http = yield* AttioHttpClient
@@ -348,7 +355,7 @@ const makeAttioRecords = Effect.gen(function* () {
 		 * @see https://docs.attio.com/rest-api/endpoint-reference/records/list-record-attribute-values
 		 */
 		listAttributeValues: Effect.fn("AttioRecords.listAttributeValues")(
-			function* (
+			function* <TValue extends Schema.Top = typeof Schema.Unknown>(
 				object: string,
 				recordId: string,
 				attribute: string,
@@ -357,6 +364,7 @@ const makeAttioRecords = Effect.gen(function* () {
 					limit?: number
 					offset?: number
 				},
+				valueSchema: TValue = Schema.Unknown as unknown as TValue,
 			) {
 				return yield* HttpClientRequest.get(
 					`/v2/objects/${object}/records/${recordId}/attributes/${attribute}/values`,
@@ -369,7 +377,7 @@ const makeAttioRecords = Effect.gen(function* () {
 					http.execute,
 					Effect.flatMap(
 						HttpClientResponse.schemaBodyJson(
-							DataStruct(Schema.Array(Schema.Unknown)),
+							DataStruct(Schema.Array(valueSchema)),
 						),
 					),
 					Effect.map((result) => result.data),
@@ -436,6 +444,7 @@ export class AttioRecords extends Context.Service<
 export type GenericAttioRecords<
 	TInput extends Schema.Top,
 	TOutput extends Schema.Constraint,
+	TFields extends Record<string, AttributeDef>,
 > = {
 	list: (
 		params?: Parameters<typeof AttioRecords.Service.list<TInput, TOutput>>[2],
@@ -470,11 +479,15 @@ export type GenericAttioRecords<
 		id: Parameters<typeof AttioRecords.Service.delete>[1],
 	) => ReturnType<typeof AttioRecords.Service.delete>
 
-	listAttributeValues: (
+	listAttributeValues: <Attribute extends Extract<keyof TFields, string>>(
 		id: Parameters<typeof AttioRecords.Service.listAttributeValues>[1],
-		attribute: Parameters<typeof AttioRecords.Service.listAttributeValues>[2],
+		attribute: Attribute,
 		params?: Parameters<typeof AttioRecords.Service.listAttributeValues>[3],
-	) => ReturnType<typeof AttioRecords.Service.listAttributeValues>
+	) => ReturnType<
+		typeof AttioRecords.Service.listAttributeValues<
+			AttributeValueSchema<TFields[Attribute]>
+		>
+	>
 
 	listEntries: (
 		id: Parameters<typeof AttioRecords.Service.listEntries>[1],

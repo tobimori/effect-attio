@@ -65,6 +65,40 @@ describe("AttioClient", () => {
 		})
 	})
 
+	it("returns typed record attribute values", () => {
+		const values = client.invoices.listAttributeValues(
+			"550e8400-e29b-41d4-a716-446655440000",
+			"amount",
+		)
+
+		type Value = Effect.Success<typeof values>[number]
+
+		expect<Value["attribute_type"]>().type.toBe<"currency">()
+		expect<Value["currency_value"]>().type.toBe<number>()
+		expect(client.invoices.listAttributeValues).type.not.toBeCallableWith(
+			"550e8400-e29b-41d4-a716-446655440000",
+			"unknownField",
+		)
+	})
+
+	it("returns typed list attribute values", () => {
+		const values = client.lists.opportunities.listAttributeValues(
+			"550e8400-e29b-41d4-a716-446655440000",
+			"title",
+		)
+
+		type Value = Effect.Success<typeof values>[number]
+
+		expect<Value["attribute_type"]>().type.toBe<"text">()
+		expect<Value["value"]>().type.toBe<string>()
+		expect(
+			client.lists.opportunities.listAttributeValues,
+		).type.not.toBeCallableWith(
+			"550e8400-e29b-41d4-a716-446655440000",
+			"unknownField",
+		)
+	})
+
 	it("is available as an Effect service", () => {
 		const program = Effect.gen(function* () {
 			return yield* TestAttioClient

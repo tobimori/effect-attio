@@ -14,6 +14,7 @@ import {
 	mapAttioErrors,
 } from "../error-transforms.js"
 import { AttioHttpClient } from "../http-client.js"
+import type { AttributeDef } from "../schemas/attribute-builder.js"
 import { DataStruct, Uuid } from "../shared/schemas.js"
 
 const EntryId = Schema.Struct({
@@ -21,6 +22,12 @@ const EntryId = Schema.Struct({
 	list_id: Uuid,
 	entry_id: Uuid,
 })
+
+type AttributeValueSchema<T extends AttributeDef> = T extends {
+	value: infer Value extends Schema.Top
+}
+	? Value
+	: typeof Schema.Unknown
 
 const makeAttioEntries = Effect.gen(function* () {
 	const http = yield* AttioHttpClient
@@ -367,7 +374,7 @@ const makeAttioEntries = Effect.gen(function* () {
 		 * @see https://docs.attio.com/rest-api/endpoint-reference/entries/list-attribute-values-for-a-list-entry
 		 */
 		listAttributeValues: Effect.fn("AttioEntries.listAttributeValues")(
-			function* (
+			function* <TValue extends Schema.Top = typeof Schema.Unknown>(
 				list: string,
 				entryId: string,
 				attribute: string,
@@ -376,6 +383,7 @@ const makeAttioEntries = Effect.gen(function* () {
 					limit?: number
 					offset?: number
 				},
+				valueSchema: TValue = Schema.Unknown as unknown as TValue,
 			) {
 				return yield* HttpClientRequest.get(
 					`/v2/lists/${list}/entries/${entryId}/attributes/${attribute}/values`,
@@ -388,7 +396,7 @@ const makeAttioEntries = Effect.gen(function* () {
 					http.execute,
 					Effect.flatMap(
 						HttpClientResponse.schemaBodyJson(
-							DataStruct(Schema.Array(Schema.Unknown)),
+							DataStruct(Schema.Array(valueSchema)),
 						),
 					),
 					Effect.map((result) => result.data),
@@ -413,6 +421,7 @@ export class AttioEntries extends Context.Service<
 export type GenericAttioEntries<
 	TInput extends Schema.Top,
 	TOutput extends Schema.Constraint,
+	TFields extends Record<string, AttributeDef>,
 > = {
 	list: (
 		params?: Parameters<typeof AttioEntries.Service.list<TInput, TOutput>>[2],
@@ -437,9 +446,13 @@ export type GenericAttioEntries<
 		entryId: Parameters<typeof AttioEntries.Service.patch<TInput, TOutput>>[2],
 		data: Parameters<typeof AttioEntries.Service.patch<TInput, TOutput>>[3],
 	) => ReturnType<typeof AttioEntries.Service.patch<TInput, TOutput>>
-	listAttributeValues: (
+	listAttributeValues: <Attribute extends Extract<keyof TFields, string>>(
 		entryId: Parameters<typeof AttioEntries.Service.listAttributeValues>[1],
-		attribute: Parameters<typeof AttioEntries.Service.listAttributeValues>[2],
+		attribute: Attribute,
 		params?: Parameters<typeof AttioEntries.Service.listAttributeValues>[3],
-	) => ReturnType<typeof AttioEntries.Service.listAttributeValues>
+	) => ReturnType<
+		typeof AttioEntries.Service.listAttributeValues<
+			AttributeValueSchema<TFields[Attribute]>
+		>
+	>
 }

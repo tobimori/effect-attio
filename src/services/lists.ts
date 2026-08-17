@@ -12,6 +12,7 @@ import {
 } from "../error-transforms.js"
 import { AttioHttpClient } from "../http-client.js"
 import { Actor, DataStruct, Uuid } from "../shared/schemas.js"
+import { ViewId, ViewListParams, ViewListResponse } from "../shared/views.js"
 
 export const ListId = Schema.Struct({
 	workspace_id: Schema.String,
@@ -55,6 +56,18 @@ export const ListUpdate = Schema.Struct({
 		),
 	),
 	workspace_member_access: Schema.optional(Schema.Array(WorkspaceMemberAccess)),
+})
+
+export const ListViewId = Schema.Struct({
+	workspace_id: Uuid,
+	list_id: Uuid,
+	...ViewId.fields,
+})
+
+export const ListView = Schema.Struct({
+	id: ListViewId,
+	title: Schema.String,
+	created_at: Schema.DateTimeUtcFromString,
 })
 
 const makeAttioLists = Effect.gen(function* () {
@@ -149,6 +162,29 @@ const makeAttioLists = Effect.gen(function* () {
 					AttioValidationErrorTransform,
 					AttioConflictErrorTransform,
 				),
+			)
+		}),
+
+		/**
+		 * Lists saved views for a list. Results are ordered by view ID.
+		 *
+		 * Required scopes: `list_configuration:read`
+		 *
+		 * @see https://docs.attio.com/rest-api/endpoint-reference/lists/list-views-for-list
+		 */
+		listViews: Effect.fn("AttioLists.listViews")(function* (
+			list: string,
+			params?: (typeof ViewListParams)["Type"],
+		) {
+			const query = yield* Schema.encodeEffect(ViewListParams)(params ?? {})
+
+			return yield* HttpClientRequest.get(`/v2/lists/${list}/views`).pipe(
+				HttpClientRequest.appendUrlParams(query),
+				http.execute,
+				Effect.flatMap(
+					HttpClientResponse.schemaBodyJson(ViewListResponse(ListView)),
+				),
+				mapAttioErrors(AttioNotFoundErrorTransform),
 			)
 		}),
 	}

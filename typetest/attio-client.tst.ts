@@ -91,6 +91,36 @@ describe("AttioClient", () => {
 		})
 	})
 
+	it("lists object views with cursor pagination", () => {
+		const views = client.objects.listViews("companies", {
+			show_archived: true,
+			limit: 1000,
+			cursor: "next-page",
+		})
+
+		type Response = Effect.Success<typeof views>
+		type View = Response["data"][number]
+
+		expect<View["id"]["object_id"]>().type.toBe<string>()
+		expect<View["id"]["view_id"]>().type.toBe<string>()
+		expect<View["created_at"]>().type.toBe<import("effect").DateTime.Utc>()
+		expect<Response["pagination"]["next_cursor"]>().type.toBe<string | null>()
+		expect(client.objects.listViews).type.not.toBeCallableWith("companies", {
+			limit: "500",
+		})
+	})
+
+	it("lists list views with cursor pagination", () => {
+		const views = client.lists.listViews("opportunities")
+
+		type Response = Effect.Success<typeof views>
+		type View = Response["data"][number]
+
+		expect<View["id"]["list_id"]>().type.toBe<string>()
+		expect<View["id"]["view_id"]>().type.toBe<string>()
+		expect<Response["pagination"]["next_cursor"]>().type.toBe<string | null>()
+	})
+
 	it("supports current task list parameters", () => {
 		expect(client.tasks.list).type.toBeCallableWith({
 			sort: "completed_at:desc",

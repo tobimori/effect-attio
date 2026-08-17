@@ -1,7 +1,9 @@
-import * as HttpClientRequest from "@effect/platform/HttpClientRequest"
-import * as HttpClientResponse from "@effect/platform/HttpClientResponse"
+import * as Context from "effect/Context"
 import * as Effect from "effect/Effect"
+import * as Layer from "effect/Layer"
 import * as Schema from "effect/Schema"
+import * as HttpClientRequest from "effect/unstable/http/HttpClientRequest"
+import * as HttpClientResponse from "effect/unstable/http/HttpClientResponse"
 import {
 	AttioConflictErrorTransform,
 	AttioNotFoundErrorTransform,
@@ -21,7 +23,7 @@ export const AttioObject = Schema.Struct({
 	api_slug: Schema.NullOr(Schema.String),
 	singular_noun: Schema.NullOr(Schema.String),
 	plural_noun: Schema.NullOr(Schema.String),
-	created_at: Schema.DateTimeUtc,
+	created_at: Schema.DateTimeUtcFromString,
 })
 
 export const ObjectInput = Schema.Struct({
@@ -36,94 +38,99 @@ export const ObjectUpdate = Schema.Struct({
 	plural_noun: Schema.optional(Schema.String),
 })
 
-export class AttioObjects extends Effect.Service<AttioObjects>()(
-	"AttioObjects",
-	{
-		effect: Effect.gen(function* () {
-			const http = yield* AttioHttpClient
+const makeAttioObjects = Effect.gen(function* () {
+	const http = yield* AttioHttpClient
 
-			return {
-				/**
-				 * Lists all system-defined and user-defined objects in your workspace.
-				 *
-				 * Required scopes: `object_configuration:read`
-				 */
-				list: Effect.fn("objects.list")(function* () {
-					return yield* http.get("/v2/objects").pipe(
-						Effect.flatMap(
-							HttpClientResponse.schemaBodyJson(
-								DataStruct(Schema.Array(AttioObject)),
-							),
-						),
-						Effect.map((result) => result.data),
-					)
-				}),
-
-				/**
-				 * Creates a new custom object in your workspace.
-				 *
-				 * Required scopes: `object_configuration:read-write`
-				 */
-				create: Effect.fn("objects.create")(function* (
-					object: Schema.Schema.Encoded<typeof ObjectInput>,
-				) {
-					const data = yield* Schema.encodeUnknown(ObjectInput)(object)
-
-					return yield* HttpClientRequest.post("/v2/objects").pipe(
-						HttpClientRequest.bodyJson({ data }),
-						Effect.flatMap(http.execute),
-						Effect.flatMap(
-							HttpClientResponse.schemaBodyJson(DataStruct(AttioObject)),
-						),
-						Effect.map((result) => result.data),
-						mapAttioErrors(
-							AttioValidationErrorTransform,
-							AttioConflictErrorTransform,
-						),
-					)
-				}),
-
-				/**
-				 * Gets a single object by its object_id or slug.
-				 *
-				 * Required scopes: `object_configuration:read`
-				 */
-				get: Effect.fn("objects.get")(function* (object: string) {
-					return yield* http.get(`/v2/objects/${object}`).pipe(
-						Effect.flatMap(
-							HttpClientResponse.schemaBodyJson(DataStruct(AttioObject)),
-						),
-						Effect.map((result) => result.data),
-						mapAttioErrors(AttioNotFoundErrorTransform),
-					)
-				}),
-
-				/**
-				 * Updates a single object. The object to be updated is identified by its object_id.
-				 *
-				 * Required scopes: `object_configuration:read-write`
-				 */
-				update: Effect.fn("objects.update")(function* (
-					object: string,
-					update: Schema.Schema.Encoded<typeof ObjectUpdate>,
-				) {
-					const data = yield* Schema.encodeUnknown(ObjectUpdate)(update)
-
-					return yield* HttpClientRequest.patch(`/v2/objects/${object}`).pipe(
-						HttpClientRequest.bodyJson({ data }),
-						Effect.flatMap(http.execute),
-						Effect.flatMap(
-							HttpClientResponse.schemaBodyJson(DataStruct(AttioObject)),
-						),
-						Effect.map((result) => result.data),
-						mapAttioErrors(
-							AttioNotFoundErrorTransform,
-							AttioValidationErrorTransform,
-							AttioConflictErrorTransform,
-						),
-					)
-				}),
-			}
+	return {
+		/**
+		 * Lists all system-defined and user-defined objects in your workspace.
+		 *
+		 * Required scopes: `object_configuration:read`
+		 */
+		list: Effect.fn("AttioObjects.list")(function* () {
+			return yield* http.get("/v2/objects").pipe(
+				Effect.flatMap(
+					HttpClientResponse.schemaBodyJson(
+						DataStruct(Schema.Array(AttioObject)),
+					),
+				),
+				Effect.map((result) => result.data),
+			)
 		}),
-	},
-) {}
+
+		/**
+		 * Creates a new custom object in your workspace.
+		 *
+		 * Required scopes: `object_configuration:read-write`
+		 */
+		create: Effect.fn("AttioObjects.create")(function* (
+			object: (typeof ObjectInput)["Encoded"],
+		) {
+			const data = yield* Schema.encodeUnknownEffect(ObjectInput)(object)
+
+			return yield* HttpClientRequest.post("/v2/objects").pipe(
+				HttpClientRequest.bodyJson({ data }),
+				Effect.flatMap(http.execute),
+				Effect.flatMap(
+					HttpClientResponse.schemaBodyJson(DataStruct(AttioObject)),
+				),
+				Effect.map((result) => result.data),
+				mapAttioErrors(
+					AttioValidationErrorTransform,
+					AttioConflictErrorTransform,
+				),
+			)
+		}),
+
+		/**
+		 * Gets a single object by its object_id or slug.
+		 *
+		 * Required scopes: `object_configuration:read`
+		 */
+		get: Effect.fn("AttioObjects.get")(function* (object: string) {
+			return yield* http.get(`/v2/objects/${object}`).pipe(
+				Effect.flatMap(
+					HttpClientResponse.schemaBodyJson(DataStruct(AttioObject)),
+				),
+				Effect.map((result) => result.data),
+				mapAttioErrors(AttioNotFoundErrorTransform),
+			)
+		}),
+
+		/**
+		 * Updates a single object. The object to be updated is identified by its object_id.
+		 *
+		 * Required scopes: `object_configuration:read-write`
+		 */
+		update: Effect.fn("AttioObjects.update")(function* (
+			object: string,
+			update: (typeof ObjectUpdate)["Encoded"],
+		) {
+			const data = yield* Schema.encodeUnknownEffect(ObjectUpdate)(update)
+
+			return yield* HttpClientRequest.patch(`/v2/objects/${object}`).pipe(
+				HttpClientRequest.bodyJson({ data }),
+				Effect.flatMap(http.execute),
+				Effect.flatMap(
+					HttpClientResponse.schemaBodyJson(DataStruct(AttioObject)),
+				),
+				Effect.map((result) => result.data),
+				mapAttioErrors(
+					AttioNotFoundErrorTransform,
+					AttioValidationErrorTransform,
+					AttioConflictErrorTransform,
+				),
+			)
+		}),
+	}
+})
+
+export class AttioObjects extends Context.Service<
+	AttioObjects,
+	Effect.Success<typeof makeAttioObjects>
+>()("effect-attio/services/AttioObjects") {
+	static readonly layer = Layer.effect(
+		AttioObjects,
+		Effect.map(makeAttioObjects, AttioObjects.of),
+	)
+}

@@ -1,8 +1,10 @@
-import * as HttpClientResponse from "@effect/platform/HttpClientResponse"
+import * as Context from "effect/Context"
 import * as Effect from "effect/Effect"
+import * as Layer from "effect/Layer"
 import * as Schema from "effect/Schema"
+import * as HttpClientResponse from "effect/unstable/http/HttpClientResponse"
 import { AttioHttpClient } from "../http-client.js"
-import { WorkspaceId } from "../shared/schemas.js"
+import { Uuid, WorkspaceId } from "../shared/schemas.js"
 
 export const TokenInfo = Schema.Struct({
 	active: Schema.Boolean,
@@ -11,10 +13,10 @@ export const TokenInfo = Schema.Struct({
 	token_type: Schema.Literal("Bearer"),
 	exp: Schema.NullOr(Schema.Number),
 	iat: Schema.Number,
-	sub: Schema.UUID,
+	sub: Uuid,
 	aud: Schema.String,
 	iss: Schema.Literal("attio.com"),
-	authorized_by_workspace_member_id: Schema.NullOr(Schema.UUID),
+	authorized_by_workspace_member_id: Schema.NullOr(Uuid),
 	...WorkspaceId.fields,
 	workspace_name: Schema.String,
 	workspace_slug: Schema.String,
@@ -25,25 +27,31 @@ export const InactiveToken = Schema.Struct({
 	active: Schema.Literal(false),
 })
 
-export const TokenInfoResponse = Schema.Union(TokenInfo, InactiveToken)
+export const TokenInfoResponse = Schema.Union([TokenInfo, InactiveToken])
 
-export class AttioMeta extends Effect.Service<AttioMeta>()("AttioMeta", {
-	effect: Effect.gen(function* () {
-		const http = yield* AttioHttpClient
+const makeAttioMeta = Effect.gen(function* () {
+	const http = yield* AttioHttpClient
 
-		return {
-			/**
-			 * Identify the current access token, the workspace it is linked to, and any permissions it has.
-			 */
-			identify: Effect.fn("meta.identify")(function* () {
-				return yield* http
-					.get("/v2/self")
-					.pipe(
-						Effect.flatMap(
-							HttpClientResponse.schemaBodyJson(TokenInfoResponse),
-						),
-					)
-			}),
-		}
-	}),
-}) {}
+	return {
+		/**
+		 * Identify the current access token, the workspace it is linked to, and any permissions it has.
+		 */
+		identify: Effect.fn("AttioMeta.identify")(function* () {
+			return yield* http
+				.get("/v2/self")
+				.pipe(
+					Effect.flatMap(HttpClientResponse.schemaBodyJson(TokenInfoResponse)),
+				)
+		}),
+	}
+})
+
+export class AttioMeta extends Context.Service<
+	AttioMeta,
+	Effect.Success<typeof makeAttioMeta>
+>()("effect-attio/services/AttioMeta") {
+	static readonly layer = Layer.effect(
+		AttioMeta,
+		Effect.map(makeAttioMeta, AttioMeta.of),
+	)
+}

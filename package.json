@@ -1,52 +1,61 @@
 {
 	"name": "effect-attio",
 	"version": "0.3.3",
-	"type": "module",
-	"license": "MIT",
 	"description": "Attio API SDK for Effect",
-	"author": "Tobias Möritz <tobias@moeritz.io>",
+	"keywords": [
+		"api",
+		"attio",
+		"effect",
+		"sdk",
+		"typescript"
+	],
 	"homepage": "https://github.com/tobimori/effect-attio",
+	"bugs": {
+		"url": "https://github.com/tobimori/effect-attio/issues"
+	},
+	"license": "MIT",
+	"author": "Tobias Möritz <tobias@moeritz.io>",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/tobimori/effect-attio.git"
 	},
-	"bugs": {
-		"url": "https://github.com/tobimori/effect-attio/issues"
-	},
-	"keywords": [
-		"effect",
-		"attio",
-		"api",
-		"sdk",
-		"typescript"
-	],
 	"files": [
 		"dist"
 	],
+	"type": "module",
 	"main": "dist/index.js",
 	"exports": {
 		".": "./dist/index.js",
 		"./*": "./dist/*.js"
 	},
 	"scripts": {
-		"build": "tsc",
-		"fix": "bun biome check --fix",
-		"ci": "bun run fix && bun run build",
-		"prepublishOnly": "bun run ci",
+		"clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
+		"build": "pnpm run clean && tsc",
+		"test": "pnpm run build && tstyche --target '>=5.9'",
+		"test:types": "tstyche --target '>=5.9'",
+		"format": "oxfmt --write",
+		"lint": "oxlint --fix --deny-warnings",
+		"fix": "pnpm run lint && pnpm run format",
+		"ci": "pnpm run fix && pnpm run test",
+		"prepublishOnly": "pnpm run ci",
 		"local-release": "changeset version && changeset publish",
 		"changeset": "changeset",
-		"release": "bun run build && changeset publish"
-	},
-	"peerDependencies": {
-		"@effect/platform": "^0.90.2",
-		"effect": "^3.17.7"
+		"release": "pnpm run build && changeset publish"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^2.2.0",
 		"@changesets/cli": "^2.29.6",
-		"@effect/language-service": "^0.35.2",
-		"@effect/platform-browser": "^0.70.0",
-		"@effect/platform-bun": "^0.78.0",
+		"@effect/language-service": "^0.87.2",
+		"effect": "4.0.0-rc.110",
+		"oxfmt": "^0.63.0",
+		"oxlint": "^1.78.0",
+		"tstyche": "^7.2.2",
 		"typescript": "^5.9.2"
-	}
+	},
+	"peerDependencies": {
+		"effect": "^4.0.0-rc.110"
+	},
+	"engines": {
+		"node": ">=24"
+	},
+	"packageManager": "pnpm@11.22.0"
 }

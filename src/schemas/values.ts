@@ -1,7 +1,6 @@
-import * as ParseResult from "effect/ParseResult"
 import * as Schema from "effect/Schema"
 
-export const CurrencyCode = Schema.Literal(
+export const CurrencyCode = Schema.Literals([
 	"ARS",
 	"AUD",
 	"BRL",
@@ -39,9 +38,9 @@ export const CurrencyCode = Schema.Literal(
 	"AED",
 	"UYU",
 	"USD",
-)
+])
 
-export const CountryCode = Schema.Literal(
+export const CountryCode = Schema.Literals([
 	"AF",
 	"AX",
 	"AL",
@@ -294,17 +293,4 @@ export const CountryCode = Schema.Literal(
 	"SX",
 	"XK",
 	"AC",
-)
-
-// unwraps array on decode, wraps on encode
-// handles empty arrays by returning null
-export const ApiSingleValue = <A, I, R>(itemSchema: Schema.Schema<A, I, R>) =>
-	Schema.transformOrFail(
-		Schema.Array(itemSchema).pipe(Schema.maxItems(1)),
-		Schema.NullOr(Schema.typeSchema(itemSchema)),
-		{
-			strict: false,
-			decode: (arr) => ParseResult.succeed(arr.length === 0 ? null : arr[0]),
-			encode: (item) => ParseResult.succeed(item === null ? [] : [item]),
-		},
-	)
+])

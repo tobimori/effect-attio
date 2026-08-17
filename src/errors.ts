@@ -16,7 +16,7 @@ export class AttioValidationError extends Schema.TaggedError<AttioValidationErro
 		errors: Schema.Array(
 			Schema.Struct({
 				code: Schema.String,
-				path: Schema.Array(Schema.Union(Schema.String, Schema.Number)),
+				path: Schema.Array(Schema.Union([Schema.String, Schema.Number])),
 				message: Schema.String,
 			}),
 		),
@@ -28,10 +28,10 @@ export class AttioMissingValueError extends Schema.TaggedError<AttioMissingValue
 	"AttioMissingValueError",
 	{
 		message: Schema.String,
-		code: Schema.Union(
+		code: Schema.Union([
 			Schema.Literal("missing_value"),
 			Schema.Literal("value_not_found"),
-		),
+		]),
 	},
 ) {}
 
@@ -97,7 +97,7 @@ export class AttioRateLimitError extends Schema.TaggedError<AttioRateLimitError>
 	"AttioRateLimitError",
 	{
 		message: Schema.String,
-		retryAfter: Schema.DateTimeUtcFromSelf,
+		retryAfter: Schema.DateTimeUtc,
 	},
 ) {}
 

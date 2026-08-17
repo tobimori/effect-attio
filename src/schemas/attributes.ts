@@ -1,6 +1,5 @@
 import * as Schema from "effect/Schema"
-import { DateTimeISOString } from "../shared/datetime-input.js"
-import { Actor } from "../shared/schemas.js"
+import { Actor, Uuid } from "../shared/schemas.js"
 import { makeAttribute } from "./attribute-builder.js"
 import { CountryCode, CurrencyCode } from "./values.js"
 
@@ -20,17 +19,17 @@ import { CountryCode, CurrencyCode } from "./values.js"
 export const ActorReference = makeAttribute(
 	{
 		/* Currently, the only type of actor that can be explicitly set in our API is "workspace-member". We may expand this list in future. */
-		input: Schema.Union(
+		input: Schema.Union([
 			Schema.String,
 			Schema.Struct({
 				workspace_member_email_address: Schema.String,
 			}),
 			Schema.Struct({
 				referenced_actor_type: Schema.Literal("workspace-member"),
-				referenced_actor_id: Schema.UUID,
+				referenced_actor_id: Uuid,
 			}),
-		),
-		output: Schema.Union(
+		]),
+		output: Schema.Union([
 			Schema.Struct({
 				attribute_type: Schema.Literal("actor-reference"),
 				referenced_actor_type: Schema.Literal("system"),
@@ -38,14 +37,14 @@ export const ActorReference = makeAttribute(
 			}),
 			Schema.Struct({
 				attribute_type: Schema.Literal("actor-reference"),
-				referenced_actor_type: Schema.Literal(
+				referenced_actor_type: Schema.Literals([
 					"api-token",
 					"workspace-member",
 					"app",
-				),
-				referenced_actor_id: Schema.UUID,
+				]),
+				referenced_actor_id: Uuid,
 			}),
-		),
+		]),
 	},
 	{ multiple: true },
 )
@@ -64,7 +63,7 @@ export const ActorReference = makeAttribute(
  * @see https://docs.attio.com/docs/attribute-types/attribute-types-checkbox
  */
 export const Checkbox = makeAttribute({
-	input: Schema.Union(Schema.Boolean, Schema.Literal("true", "false")),
+	input: Schema.Union([Schema.Boolean, Schema.Literals(["true", "false"])]),
 	output: Schema.Struct({
 		attribute_type: Schema.Literal("checkbox"),
 		value: Schema.Boolean,
@@ -87,13 +86,13 @@ export const Checkbox = makeAttribute({
  * @see https://docs.attio.com/docs/attribute-types/attribute-types-currency
  */
 export const Currency = makeAttribute({
-	input: Schema.Union(
+	input: Schema.Union([
 		Schema.Number,
 		Schema.String,
 		Schema.Struct({
-			currency_value: Schema.Union(Schema.Number, Schema.String),
+			currency_value: Schema.Union([Schema.Number, Schema.String]),
 		}),
-	),
+	]),
 	output: Schema.Struct({
 		attribute_type: Schema.Literal("currency"),
 		currency_value: Schema.Number,
@@ -115,15 +114,15 @@ export const Currency = makeAttribute({
  * @see https://docs.attio.com/docs/attribute-types/attribute-types-date
  */
 export const Date = makeAttribute({
-	input: Schema.Union(
-		DateTimeISOString,
+	input: Schema.Union([
+		Schema.DateTimeUtcFromString,
 		Schema.Struct({
-			value: DateTimeISOString,
+			value: Schema.DateTimeUtcFromString,
 		}),
-	),
+	]),
 	output: Schema.Struct({
 		attribute_type: Schema.Literal("date"),
-		value: Schema.DateTimeUtc,
+		value: Schema.DateTimeUtcFromString,
 	}),
 })
 
@@ -144,12 +143,12 @@ export const Date = makeAttribute({
  */
 export const Domain = makeAttribute(
 	{
-		input: Schema.Union(
+		input: Schema.Union([
 			Schema.String,
 			Schema.Struct({
 				domain: Schema.String,
 			}),
-		),
+		]),
 		output: Schema.Struct({
 			attribute_type: Schema.Literal("domain"),
 			domain: Schema.String,
@@ -174,12 +173,12 @@ export const Domain = makeAttribute(
  */
 export const EmailAddress = makeAttribute(
 	{
-		input: Schema.Union(
+		input: Schema.Union([
 			Schema.String,
 			Schema.Struct({
 				email_address: Schema.String,
 			}),
-		),
+		]),
 		output: Schema.Struct({
 			attribute_type: Schema.Literal("email-address"),
 			email_address: Schema.String,
@@ -210,8 +209,8 @@ export const Interaction = makeAttribute({
 	input: Schema.Void,
 	output: Schema.Struct({
 		attribute_type: Schema.Literal("interaction"),
-		interaction_type: Schema.Literal("email", "calendar-event"),
-		interacted_at: Schema.DateTimeUtc,
+		interaction_type: Schema.Literals(["email", "calendar-event"]),
+		interacted_at: Schema.DateTimeUtcFromString,
 		owner_actor: Actor,
 	}),
 })
@@ -241,7 +240,7 @@ export const Interaction = makeAttribute({
  * @see https://docs.attio.com/docs/attribute-types/attribute-types-location
  */
 export const Location = makeAttribute({
-	input: Schema.Union(
+	input: Schema.Union([
 		Schema.String, // Address string
 		Schema.Struct({
 			line_1: Schema.NullOr(Schema.String),
@@ -255,7 +254,7 @@ export const Location = makeAttribute({
 			latitude: Schema.NullOr(Schema.NumberFromString),
 			longitude: Schema.NullOr(Schema.NumberFromString),
 		}),
-	),
+	]),
 	output: Schema.Struct({
 		attribute_type: Schema.Literal("location"),
 		line_1: Schema.NullOr(Schema.String),
@@ -283,14 +282,14 @@ export const Location = makeAttribute({
  * @see https://docs.attio.com/docs/attribute-types/attribute-types-personal-name
  */
 export const PersonalName = makeAttribute({
-	input: Schema.Union(
+	input: Schema.Union([
 		Schema.String, // "Last, First" format
 		Schema.Struct({
 			first_name: Schema.String,
 			last_name: Schema.String,
 			full_name: Schema.String,
 		}),
-	),
+	]),
 	output: Schema.Struct({
 		attribute_type: Schema.Literal("personal-name"),
 		first_name: Schema.String,
@@ -313,12 +312,12 @@ export const PersonalName = makeAttribute({
  * @see https://docs.attio.com/docs/attribute-types/attribute-types-number
  */
 export const Number = makeAttribute({
-	input: Schema.Union(
+	input: Schema.Union([
 		Schema.Number,
 		Schema.Struct({
 			value: Schema.Number,
 		}),
-	),
+	]),
 	output: Schema.Struct({
 		attribute_type: Schema.Literal("number"),
 		value: Schema.Number,
@@ -340,13 +339,13 @@ export const Number = makeAttribute({
  */
 export const PhoneNumber = makeAttribute(
 	{
-		input: Schema.Union(
+		input: Schema.Union([
 			Schema.String,
 			Schema.Struct({
 				original_phone_number: Schema.String,
 				country_code: Schema.NullOr(CountryCode),
 			}),
-		),
+		]),
 		output: Schema.Struct({
 			attribute_type: Schema.Literal("phone-number"),
 			original_phone_number: Schema.String,
@@ -371,18 +370,18 @@ export const PhoneNumber = makeAttribute(
  * @see https://docs.attio.com/docs/attribute-types/attribute-types-rating
  */
 export const Rating = makeAttribute({
-	input: Schema.Union(
-		Schema.Number.pipe(
-			Schema.greaterThanOrEqualTo(0),
-			Schema.lessThanOrEqualTo(5),
+	input: Schema.Union([
+		Schema.Number.check(
+			Schema.isGreaterThanOrEqualTo(0),
+			Schema.isLessThanOrEqualTo(5),
 		),
 		Schema.Struct({
-			value: Schema.Number.pipe(
-				Schema.greaterThanOrEqualTo(0),
-				Schema.lessThanOrEqualTo(5),
+			value: Schema.Number.check(
+				Schema.isGreaterThanOrEqualTo(0),
+				Schema.isLessThanOrEqualTo(5),
 			),
 		}),
-	),
+	]),
 	output: Schema.Struct({
 		attribute_type: Schema.Literal("rating"),
 		value: Schema.Number,
@@ -402,17 +401,17 @@ export const Rating = makeAttribute({
  */
 export const RecordReference = makeAttribute(
 	{
-		input: Schema.Union(
-			Schema.UUID, // Record ID
+		input: Schema.Union([
+			Uuid, // Record ID
 			Schema.Struct({
 				target_object: Schema.String,
-				target_record_id: Schema.UUID,
+				target_record_id: Uuid,
 			}),
-		),
+		]),
 		output: Schema.Struct({
 			attribute_type: Schema.Literal("record-reference"),
 			target_object: Schema.String,
-			target_record_id: Schema.UUID,
+			target_record_id: Uuid,
 		}),
 	},
 	{ multiple: true },
@@ -430,22 +429,22 @@ export const RecordReference = makeAttribute(
  */
 export const CompanyRecordReference = makeAttribute(
 	{
-		input: Schema.Union(
+		input: Schema.Union([
 			Schema.String, // Domain string
-			Schema.UUID, // Record ID
+			Uuid, // Record ID
 			Schema.Struct({
 				target_object: Schema.Literal("companies"),
-				target_record_id: Schema.UUID,
+				target_record_id: Uuid,
 			}),
 			Schema.Struct({
 				domains: Schema.Array(Schema.Struct({ domain: Schema.String })),
 				target_object: Schema.Literal("companies"),
 			}),
-		),
+		]),
 		output: Schema.Struct({
 			attribute_type: Schema.Literal("record-reference"),
 			target_object: Schema.Literal("companies"),
-			target_record_id: Schema.UUID,
+			target_record_id: Uuid,
 		}),
 	},
 	{ multiple: true },
@@ -463,12 +462,12 @@ export const CompanyRecordReference = makeAttribute(
  */
 export const PersonRecordReference = makeAttribute(
 	{
-		input: Schema.Union(
+		input: Schema.Union([
 			Schema.String, // Email string
-			Schema.UUID, // Record ID
+			Uuid, // Record ID
 			Schema.Struct({
 				target_object: Schema.Literal("people"),
-				target_record_id: Schema.UUID,
+				target_record_id: Uuid,
 			}),
 			Schema.Struct({
 				email_addresses: Schema.Array(
@@ -476,11 +475,11 @@ export const PersonRecordReference = makeAttribute(
 				),
 				target_object: Schema.Literal("people"),
 			}),
-		),
+		]),
 		output: Schema.Struct({
 			attribute_type: Schema.Literal("record-reference"),
 			target_object: Schema.Literal("people"),
-			target_record_id: Schema.UUID,
+			target_record_id: Uuid,
 		}),
 	},
 	{ multiple: true },
@@ -497,17 +496,17 @@ export const PersonRecordReference = makeAttribute(
  */
 export const DealRecordReference = makeAttribute(
 	{
-		input: Schema.Union(
-			Schema.UUID, // Record ID
+		input: Schema.Union([
+			Uuid, // Record ID
 			Schema.Struct({
 				target_object: Schema.Literal("deals"),
-				target_record_id: Schema.UUID,
+				target_record_id: Uuid,
 			}),
-		),
+		]),
 		output: Schema.Struct({
 			attribute_type: Schema.Literal("record-reference"),
 			target_object: Schema.Literal("deals"),
-			target_record_id: Schema.UUID,
+			target_record_id: Uuid,
 		}),
 	},
 	{ multiple: true },
@@ -525,22 +524,22 @@ export const DealRecordReference = makeAttribute(
  */
 export const UserRecordReference = makeAttribute(
 	{
-		input: Schema.Union(
+		input: Schema.Union([
 			Schema.String, // User ID string
-			Schema.UUID, // Record ID
+			Uuid, // Record ID
 			Schema.Struct({
 				target_object: Schema.Literal("users"),
-				target_record_id: Schema.UUID,
+				target_record_id: Uuid,
 			}),
 			Schema.Struct({
 				user_id: Schema.Array(Schema.Struct({ value: Schema.String })),
 				target_object: Schema.Literal("users"),
 			}),
-		),
+		]),
 		output: Schema.Struct({
 			attribute_type: Schema.Literal("record-reference"),
 			target_object: Schema.Literal("users"),
-			target_record_id: Schema.UUID,
+			target_record_id: Uuid,
 		}),
 	},
 	{ multiple: true },
@@ -558,22 +557,22 @@ export const UserRecordReference = makeAttribute(
  */
 export const WorkspaceRecordReference = makeAttribute(
 	{
-		input: Schema.Union(
+		input: Schema.Union([
 			Schema.String, // Workspace ID string
-			Schema.UUID, // Record ID
+			Uuid, // Record ID
 			Schema.Struct({
 				target_object: Schema.Literal("workspaces"),
-				target_record_id: Schema.UUID,
+				target_record_id: Uuid,
 			}),
 			Schema.Struct({
 				workspace_id: Schema.Array(Schema.Struct({ value: Schema.String })),
 				target_object: Schema.Literal("workspaces"),
 			}),
-		),
+		]),
 		output: Schema.Struct({
 			attribute_type: Schema.Literal("record-reference"),
 			target_object: Schema.Literal("workspaces"),
-			target_record_id: Schema.UUID,
+			target_record_id: Uuid,
 		}),
 	},
 	{ multiple: true },
@@ -598,21 +597,21 @@ export const WorkspaceRecordReference = makeAttribute(
  */
 export const Select = makeAttribute(
 	{
-		input: Schema.Union(
+		input: Schema.Union([
 			Schema.String, // Option title
-			Schema.UUID, // Option ID
+			Uuid, // Option ID
 			Schema.Struct({
-				option: Schema.Union(Schema.String, Schema.UUID),
+				option: Schema.Union([Schema.String, Uuid]),
 			}),
-		),
+		]),
 		output: Schema.Struct({
 			attribute_type: Schema.Literal("select"),
 			option: Schema.Struct({
 				id: Schema.Struct({
-					workspace_id: Schema.UUID,
-					object_id: Schema.UUID,
-					attribute_id: Schema.UUID,
-					option_id: Schema.UUID,
+					workspace_id: Uuid,
+					object_id: Uuid,
+					attribute_id: Uuid,
+					option_id: Uuid,
 				}),
 				title: Schema.String,
 				is_archived: Schema.Boolean,
@@ -634,17 +633,17 @@ export const SelectWith = <const T extends readonly [string, ...string[]]>(
 ) =>
 	makeAttribute(
 		{
-			input: Schema.Literal(...options),
+			input: Schema.Literals(options),
 			output: Schema.Struct({
 				attribute_type: Schema.Literal("select"),
 				option: Schema.Struct({
 					id: Schema.Struct({
-						workspace_id: Schema.UUID,
-						object_id: Schema.UUID,
-						attribute_id: Schema.UUID,
-						option_id: Schema.UUID,
+						workspace_id: Uuid,
+						object_id: Uuid,
+						attribute_id: Uuid,
+						option_id: Uuid,
 					}),
-					title: Schema.Literal(...options),
+					title: Schema.Literals(options),
 					is_archived: Schema.Boolean,
 				}),
 			}),
@@ -668,20 +667,20 @@ export const SelectWith = <const T extends readonly [string, ...string[]]>(
  * @see https://docs.attio.com/docs/attribute-types/attribute-types-status
  */
 export const Status = makeAttribute({
-	input: Schema.Union(
+	input: Schema.Union([
 		Schema.String,
 		Schema.Struct({
-			status: Schema.Union(Schema.String, Schema.UUID),
+			status: Schema.Union([Schema.String, Uuid]),
 		}),
-	),
+	]),
 	output: Schema.Struct({
 		attribute_type: Schema.Literal("status"),
 		status: Schema.Struct({
 			id: Schema.Struct({
-				workspace_id: Schema.UUID,
-				object_id: Schema.UUID,
-				attribute_id: Schema.UUID,
-				status_id: Schema.UUID,
+				workspace_id: Uuid,
+				object_id: Uuid,
+				attribute_id: Uuid,
+				status_id: Uuid,
 			}),
 			title: Schema.String,
 		}),
@@ -702,12 +701,12 @@ export const Status = makeAttribute({
  * @see https://docs.attio.com/docs/attribute-types/attribute-types-text
  */
 export const Text = makeAttribute({
-	input: Schema.Union(
+	input: Schema.Union([
 		Schema.String,
 		Schema.Struct({
 			value: Schema.String,
 		}),
-	),
+	]),
 	output: Schema.Struct({
 		attribute_type: Schema.Literal("text"),
 		value: Schema.String,
@@ -728,14 +727,14 @@ export const Text = makeAttribute({
  * @see https://docs.attio.com/docs/attribute-types/attribute-types-timestamp
  */
 export const Timestamp = makeAttribute({
-	input: Schema.Union(
-		DateTimeISOString,
+	input: Schema.Union([
+		Schema.DateTimeUtcFromString,
 		Schema.Struct({
-			value: DateTimeISOString,
+			value: Schema.DateTimeUtcFromString,
 		}),
-	),
+	]),
 	output: Schema.Struct({
 		attribute_type: Schema.Literal("timestamp"),
-		value: Schema.DateTimeUtc,
+		value: Schema.DateTimeUtcFromString,
 	}),
 })

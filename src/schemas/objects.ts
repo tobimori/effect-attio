@@ -26,14 +26,8 @@ export const companies = {
 	instagram: Attributes.Text,
 	linkedin: Attributes.Text,
 	twitter: Attributes.Text,
-	associated_deals: OptionalAttribute(
-		// @ts-expect-error - TODO: fix
-		Attributes.DealRecordReference.Multiple,
-	),
-	associated_users: OptionalAttribute(
-		// @ts-expect-error - TODO: fix
-		Attributes.UserRecordReference.Multiple,
-	),
+	associated_deals: OptionalAttribute(Attributes.DealRecordReference.Multiple),
+	associated_users: OptionalAttribute(Attributes.UserRecordReference.Multiple),
 }
 
 /**
@@ -60,14 +54,8 @@ export const people = {
 	instagram: Attributes.Text,
 	linkedin: Attributes.Text,
 	twitter: Attributes.Text,
-	associated_deals: OptionalAttribute(
-		// @ts-expect-error - TODO: fix
-		Attributes.RecordReference.Multiple,
-	),
-	associated_users: OptionalAttribute(
-		// @ts-expect-error - TODO: fix
-		Attributes.UserRecordReference.Multiple,
-	),
+	associated_deals: OptionalAttribute(Attributes.RecordReference.Multiple),
+	associated_users: OptionalAttribute(Attributes.UserRecordReference.Multiple),
 }
 
 /**

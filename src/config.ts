@@ -1,10 +1,9 @@
 import type { AttributeDef } from "./schemas/attribute-builder.js"
-import { createSchemas } from "./schemas/helpers.js"
+import { createSchemas, type CreatedSchemas } from "./schemas/helpers.js"
 import type * as Objects from "./schemas/objects.js"
 import * as StandardObjects from "./schemas/objects.js"
 
-// Objects can have fields that are either AttributeDef or have input/output properties (like .Multiple)
-type AttributeLike = AttributeDef | { input: any; output: any }
+type AttributeLike = AttributeDef
 
 export type ObjectConfig = boolean | Record<string, AttributeLike>
 export type ListConfig = Record<string, AttributeLike>
@@ -44,13 +43,15 @@ export type MergedObjectFields<T extends Record<string, ObjectConfig>> = {
 		? (typeof StandardObjects)[K] & EnabledObjects<T>[K]
 		: EnabledObjects<T>[K]
 } & {
-	[K in keyof typeof StandardObjects as K extends keyof T
-		? T[K] extends false
-			? never
-			: never
-		: K extends (typeof DEFAULT_DISABLED_OBJECTS)[number]
-			? never
-			: K]: (typeof StandardObjects)[K]
+	[
+		K in keyof typeof StandardObjects as K extends keyof T
+			? T[K] extends false
+				? never
+				: never
+			: K extends (typeof DEFAULT_DISABLED_OBJECTS)[number]
+				? never
+				: K
+	]: (typeof StandardObjects)[K]
 }
 
 export function processSchemas<
@@ -102,12 +103,13 @@ export function processSchemas<
 
 	return {
 		objects: objectSchemas as {
-			[K in keyof MergedObjectFields<T>]: ReturnType<
-				typeof createSchemas<MergedObjectFields<T>[K], "record_id">
+			[K in keyof MergedObjectFields<T>]: CreatedSchemas<
+				MergedObjectFields<T>[K],
+				"record_id"
 			>
 		},
 		lists: listSchemas as {
-			[K in keyof L]: ReturnType<typeof createSchemas<L[K], "entry_id">>
+			[K in keyof L]: CreatedSchemas<L[K], "entry_id">
 		},
 	}
 }

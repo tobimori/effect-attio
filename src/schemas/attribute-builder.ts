@@ -1,101 +1,109 @@
-import { Schema } from "effect"
-import * as ParseResult from "effect/ParseResult"
+import * as Schema from "effect/Schema"
+import * as SchemaTransformation from "effect/SchemaTransformation"
+import type * as Struct from "effect/Struct"
+import * as Tuple from "effect/Tuple"
 import { Actor } from "../shared/schemas.js"
 
 export interface AttributeDef {
-	input: Schema.Schema.Any
-	output: Schema.Schema.Any
+	input: Schema.Top
+	output: Schema.Top
 }
 
 export const BaseAttribute = Schema.Struct({
-	active_from: Schema.DateTimeUtc,
-	active_until: Schema.NullOr(Schema.DateTimeUtc),
+	active_from: Schema.DateTimeUtcFromString,
+	active_until: Schema.NullOr(Schema.DateTimeUtcFromString),
 	created_by_actor: Actor,
 })
 
 /**
  * Transforms array to single value (empty array becomes null)
  */
-export const ApiSingleValue = <A, I, R>(itemSchema: Schema.Schema<A, I, R>) =>
-	Schema.transformOrFail(
-		Schema.Array(itemSchema).pipe(Schema.maxItems(1)),
-		Schema.NullOr(Schema.typeSchema(itemSchema)),
-		{
-			strict: false,
-			decode: (arr) => ParseResult.succeed(arr.length === 0 ? null : arr[0]),
-			encode: (item) => ParseResult.succeed(item === null ? [] : [item]),
-		},
-	)
+export const ApiSingleValue = <S extends Schema.Top>(itemSchema: S) =>
+	Schema.Array(itemSchema)
+		.check(Schema.isMaxLength(1))
+		.pipe(
+			Schema.decodeTo(
+				Schema.NullOr(Schema.toType(itemSchema)),
+				SchemaTransformation.transform({
+					decode: (items) =>
+						items.length === 0 ? null : (items[0] as S["Type"]),
+					encode: (item) => (item === null ? [] : [item]),
+				}),
+			),
+		)
 
 /**
  * Transforms array to single value (requires exactly one item)
  */
-export const ApiSingleValueRequired = <A, I, R>(
-	itemSchema: Schema.Schema<A, I, R>,
-) =>
-	Schema.transformOrFail(
-		Schema.Array(itemSchema).pipe(Schema.minItems(1), Schema.maxItems(1)),
-		Schema.typeSchema(itemSchema),
-		{
-			strict: false,
-			decode: (arr) => ParseResult.succeed(arr[0]),
-			encode: (item) => ParseResult.succeed([item]),
-		},
-	)
+export const ApiSingleValueRequired = <S extends Schema.Top>(itemSchema: S) =>
+	Schema.Array(itemSchema)
+		.check(Schema.isLengthBetween(1, 1))
+		.pipe(
+			Schema.decodeTo(
+				Schema.toType(itemSchema),
+				SchemaTransformation.transform({
+					decode: (items) => items[0] as S["Type"],
+					encode: (item) => [item],
+				}),
+			),
+		)
 
-type EnrichedOutput<T extends Schema.Schema.Any> = Schema.extend<
-	T,
-	typeof BaseAttribute
->
+type Extendable =
+	| Schema.Struct<Schema.Struct.Fields>
+	| Schema.Union<ReadonlyArray<Schema.Struct<Schema.Struct.Fields>>>
+
+type EnrichedOutput<T extends Extendable> =
+	T extends Schema.Struct<infer Fields>
+		? Schema.Struct<Struct.Assign<Fields, (typeof BaseAttribute)["fields"]>>
+		: T extends Schema.Union<infer Members>
+			? Schema.Union<{
+					readonly [K in keyof Members]: Members[K] extends Schema.Struct<
+						infer Fields
+					>
+						? Schema.Struct<
+								Struct.Assign<Fields, (typeof BaseAttribute)["fields"]>
+							>
+						: never
+				}>
+			: never
+
+const enrichOutput = <T extends Extendable>(output: T): EnrichedOutput<T> =>
+	("fields" in output
+		? output.pipe(Schema.fieldsAssign(BaseAttribute.fields))
+		: output.mapMembers(
+				Tuple.map(Schema.fieldsAssign(BaseAttribute.fields)),
+			)) as EnrichedOutput<T>
 
 type BaseAttributeVariations<
-	TInput extends Schema.Schema.Any,
-	TOutput extends Schema.Schema.Any,
+	TInput extends Schema.Top,
+	TOutput extends Extendable,
 > = {
 	input: Schema.optional<TInput>
-	output: ReturnType<
-		typeof ApiSingleValue<
-			Schema.Schema.Type<EnrichedOutput<TOutput>>,
-			Schema.Schema.Encoded<EnrichedOutput<TOutput>>,
-			Schema.Schema.Context<EnrichedOutput<TOutput>>
-		>
-	>
+	output: ReturnType<typeof ApiSingleValue<EnrichedOutput<TOutput>>>
 	Required: {
 		input: TInput
-		output: ReturnType<
-			typeof ApiSingleValueRequired<
-				Schema.Schema.Type<EnrichedOutput<TOutput>>,
-				Schema.Schema.Encoded<EnrichedOutput<TOutput>>,
-				Schema.Schema.Context<EnrichedOutput<TOutput>>
-			>
-		>
+		output: ReturnType<typeof ApiSingleValueRequired<EnrichedOutput<TOutput>>>
 	}
 	ReadOnly: {
 		input: Schema.Void
-		output: ReturnType<
-			typeof ApiSingleValueRequired<
-				Schema.Schema.Type<EnrichedOutput<TOutput>>,
-				Schema.Schema.Encoded<EnrichedOutput<TOutput>>,
-				Schema.Schema.Context<EnrichedOutput<TOutput>>
-			>
-		>
+		output: ReturnType<typeof ApiSingleValueRequired<EnrichedOutput<TOutput>>>
 	}
 }
 
 type AttributeWithMultiple<
-	TInput extends Schema.Schema.Any,
-	TOutput extends Schema.Schema.Any,
+	TInput extends Schema.Top,
+	TOutput extends Extendable,
 > = BaseAttributeVariations<TInput, TOutput> & {
 	Multiple: {
-		input: Schema.optional<Schema.Array$<TInput>>
-		output: Schema.Array$<EnrichedOutput<TOutput>>
+		input: Schema.optional<Schema.$Array<TInput>>
+		output: Schema.$Array<EnrichedOutput<TOutput>>
 		Required: {
-			input: Schema.Array$<TInput>
-			output: Schema.filter<Schema.Array$<EnrichedOutput<TOutput>>>
+			input: Schema.$Array<TInput>
+			output: Schema.$Array<EnrichedOutput<TOutput>>
 		}
 		ReadOnly: {
 			input: Schema.Void
-			output: Schema.filter<Schema.Array$<EnrichedOutput<TOutput>>>
+			output: Schema.$Array<EnrichedOutput<TOutput>>
 		}
 	}
 }
@@ -104,29 +112,29 @@ type AttributeWithMultiple<
  * Creates an attribute with variations
  */
 export function makeAttribute<
-	TInput extends Schema.Schema.Any,
-	TOutput extends Schema.Schema.Any,
+	TInput extends Schema.Top,
+	TOutput extends Extendable,
 >(base: {
 	input: TInput
 	output: TOutput
 }): BaseAttributeVariations<TInput, TOutput>
 export function makeAttribute<
-	TInput extends Schema.Schema.Any,
-	TOutput extends Schema.Schema.Any,
+	TInput extends Schema.Top,
+	TOutput extends Extendable,
 >(
 	base: { input: TInput; output: TOutput },
 	options: { multiple: true },
 ): AttributeWithMultiple<TInput, TOutput>
 export function makeAttribute<
-	TInput extends Schema.Schema.Any,
-	TOutput extends Schema.Schema.Any,
+	TInput extends Schema.Top,
+	TOutput extends Extendable,
 >(
 	base: { input: TInput; output: TOutput },
 	options?: { multiple?: boolean },
 ):
 	| BaseAttributeVariations<TInput, TOutput>
 	| AttributeWithMultiple<TInput, TOutput> {
-	const enrichedOutput = Schema.extend(base.output, BaseAttribute)
+	const enrichedOutput = enrichOutput(base.output)
 
 	const result = Object.assign(
 		{
@@ -155,15 +163,11 @@ export function makeAttribute<
 				{
 					Required: {
 						input: Schema.Array(base.input),
-						output: Schema.Array(enrichedOutput).pipe(
-							Schema.minItems(1) as any,
-						),
+						output: Schema.Array(enrichedOutput).check(Schema.isMinLength(1)),
 					},
 					ReadOnly: {
 						input: Schema.Void,
-						output: Schema.Array(enrichedOutput).pipe(
-							Schema.minItems(1) as any,
-						),
+						output: Schema.Array(enrichedOutput).check(Schema.isMinLength(1)),
 					},
 				},
 			),

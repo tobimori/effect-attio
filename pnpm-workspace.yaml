@@ -1,0 +1,4 @@
+allowBuilds:
+  msgpackr-extract: false
+minimumReleaseAgeExclude:
+  - effect@4.0.0-rc.110

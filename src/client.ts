@@ -1,10 +1,9 @@
-import type * as HttpClient from "@effect/platform/HttpClient"
 import * as Config from "effect/Config"
-import type * as ConfigError from "effect/ConfigError"
 import * as Context from "effect/Context"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Schema from "effect/Schema"
+import type * as HttpClient from "effect/unstable/http/HttpClient"
 import {
 	type AttioClientSchemas,
 	type ListConfig,
@@ -13,7 +12,7 @@ import {
 	processSchemas,
 } from "./config.js"
 import { AttioHttpClient, type AttioHttpClientOptions } from "./http-client.js"
-import type { createSchemas } from "./schemas/helpers.js"
+import type { CreatedSchemas } from "./schemas/helpers.js"
 import { AttioComments } from "./services/comments.js"
 import { AttioEntries, type GenericAttioEntries } from "./services/entries.js"
 import { AttioLists } from "./services/lists.js"
@@ -26,102 +25,100 @@ import { AttioThreads } from "./services/threads.js"
 import { AttioWebhooks } from "./services/webhooks.js"
 import { AttioWorkspaceMembers } from "./services/workspace-members.js"
 
+type EmptyRecord = Record<never, never>
+
+type ConfiguredObjects<T extends AttioClientSchemas> =
+	T["objects"] extends Record<string, ObjectConfig> ? T["objects"] : EmptyRecord
+
+type ConfiguredLists<T extends AttioClientSchemas> =
+	T["lists"] extends Record<string, ListConfig> ? T["lists"] : EmptyRecord
+
+type AttioClientShape<T extends AttioClientSchemas> = {
+	[K in keyof MergedObjectFields<ConfiguredObjects<T>>]: GenericAttioRecords<
+		CreatedSchemas<
+			MergedObjectFields<ConfiguredObjects<T>>[K],
+			"record_id"
+		>["input"],
+		CreatedSchemas<
+			MergedObjectFields<ConfiguredObjects<T>>[K],
+			"record_id"
+		>["output"]
+	>
+} & {
+	lists: {
+		[K in keyof ConfiguredLists<T>]: GenericAttioEntries<
+			CreatedSchemas<ConfiguredLists<T>[K], "entry_id">["input"],
+			CreatedSchemas<ConfiguredLists<T>[K], "entry_id">["output"]
+		>
+	} & AttioLists
+	comments: AttioComments
+	threads: AttioThreads
+	tasks: AttioTasks
+	notes: AttioNotes
+	objects: AttioObjects
+	meta: AttioMeta
+	webhooks: AttioWebhooks
+	workspaceMembers: AttioWorkspaceMembers
+}
+
+type AttioClientClass<
+	Self,
+	Tag extends string,
+	T extends AttioClientSchemas,
+> = Context.ServiceClass<Self, Tag, AttioClientShape<T>> & {
+	readonly layer: (
+		opts: AttioHttpClientOptions,
+	) => Layer.Layer<Self, never, HttpClient.HttpClient>
+	readonly layerConfig: Layer.Layer<
+		Self,
+		Config.ConfigError,
+		HttpClient.HttpClient
+	>
+}
+
 const genericTag =
 	<Self, Shape>() =>
 	<Id extends string>(id: Id) =>
 	<U>(
-		members: (tag: Context.Tag<Self, Shape>) => U,
-	): Context.TagClass<Self, Id, Shape> & U => {
-		const tag = Context.Tag(id)()
+		members: (tag: Context.Service<Self, Shape>) => U,
+	): Context.ServiceClass<Self, Id, Shape> & U => {
+		const tag = Context.Service<Self, Shape>()(id)
 		return Object.assign(tag, members(tag as any)) as any
 	}
 
-export const AttioClient =
+export const AttioClient: <Self>() => <
+	Tag extends string,
+	T extends AttioClientSchemas = AttioClientSchemas,
+>(
+	tag: Tag,
+	config?: T,
+) => AttioClientClass<Self, Tag, T> =
 	<Self>() =>
 	<Tag extends string, T extends AttioClientSchemas = AttioClientSchemas>(
 		tag: Tag,
 		config: T = {} as T,
 	) =>
-		genericTag<
-			Self,
-			{
-				[K in keyof MergedObjectFields<
-					T["objects"] extends Record<string, ObjectConfig> ? T["objects"] : {}
-				>]: GenericAttioRecords<
-					ReturnType<
-						typeof createSchemas<
-							MergedObjectFields<
-								T["objects"] extends Record<string, ObjectConfig>
-									? T["objects"]
-									: {}
-							>[K],
-							"record_id"
-						>
-					>["input"],
-					ReturnType<
-						typeof createSchemas<
-							MergedObjectFields<
-								T["objects"] extends Record<string, ObjectConfig>
-									? T["objects"]
-									: {}
-							>[K],
-							"record_id"
-						>
-					>["output"]
-				>
-			} & {
-				lists: {
-					[K in keyof (T["lists"] extends Record<string, ListConfig>
-						? T["lists"]
-						: {})]: GenericAttioEntries<
-						ReturnType<
-							typeof createSchemas<
-								T["lists"] extends Record<string, ListConfig>
-									? T["lists"][K]
-									: never,
-								"entry_id"
-							>
-						>["input"],
-						ReturnType<
-							typeof createSchemas<
-								T["lists"] extends Record<string, ListConfig>
-									? T["lists"][K]
-									: never,
-								"entry_id"
-							>
-						>["output"]
-					>
-				} & AttioLists
-				comments: AttioComments
-				threads: AttioThreads
-				tasks: AttioTasks
-				notes: AttioNotes
-				objects: AttioObjects
-				meta: AttioMeta
-				webhooks: AttioWebhooks
-				workspaceMembers: AttioWorkspaceMembers
-			}
-		>()(tag)((tag) => ({
-			get Default() {
-				return (opts: AttioHttpClientOptions) =>
-					Layer.effect(
-						tag,
-						Effect.gen(function* () {
-							const comments = yield* AttioComments
-							const threads = yield* AttioThreads
-							const tasks = yield* AttioTasks
-							const notes = yield* AttioNotes
-							const objects = yield* AttioObjects
-							const records = yield* AttioRecords
-							const entries = yield* AttioEntries
-							const lists = yield* AttioLists
-							const meta = yield* AttioMeta
-							const webhooks = yield* AttioWebhooks
-							const workspaceMembers = yield* AttioWorkspaceMembers
+		genericTag<Self, AttioClientShape<T>>()(tag)((tag) => ({
+			layer(opts: AttioHttpClientOptions) {
+				return Layer.effect(
+					tag,
+					Effect.gen(function* () {
+						const comments = yield* AttioComments
+						const threads = yield* AttioThreads
+						const tasks = yield* AttioTasks
+						const notes = yield* AttioNotes
+						const objects = yield* AttioObjects
+						const records = yield* AttioRecords
+						const entries = yield* AttioEntries
+						const lists = yield* AttioLists
+						const meta = yield* AttioMeta
+						const webhooks = yield* AttioWebhooks
+						const workspaceMembers = yield* AttioWorkspaceMembers
 
-							const schemas = processSchemas(config)
+						const schemas = processSchemas(config)
 
-							return new Proxy(
+						return tag.of(
+							new Proxy(
 								{
 									comments,
 									threads,
@@ -252,41 +249,43 @@ export const AttioClient =
 										}
 									},
 								},
-							)
-						}),
-					).pipe(
-						Layer.provide(
-							Layer.mergeAll(
-								AttioComments.Default,
-								AttioThreads.Default,
-								AttioTasks.Default,
-								AttioNotes.Default,
-								AttioObjects.Default,
-								AttioRecords.Default,
-								AttioEntries.Default,
-								AttioLists.Default,
-								AttioMeta.Default,
-								AttioWebhooks.Default,
-								AttioWorkspaceMembers.Default,
 							),
+						)
+					}),
+				).pipe(
+					Layer.provide(
+						Layer.mergeAll(
+							AttioComments.layer,
+							AttioThreads.layer,
+							AttioTasks.layer,
+							AttioNotes.layer,
+							AttioObjects.layer,
+							AttioRecords.layer,
+							AttioEntries.layer,
+							AttioLists.layer,
+							AttioMeta.layer,
+							AttioWebhooks.layer,
+							AttioWorkspaceMembers.layer,
 						),
-						Layer.provide(Layer.mergeAll(AttioHttpClient.Default(opts))),
-					)
+					),
+					Layer.provide(AttioHttpClient.layer(opts)),
+				)
 			},
 			// without this return type, the layer is inferred as Layer.Layer<unknown>
 			get layerConfig(): Layer.Layer<
 				Self,
-				ConfigError.ConfigError,
+				Config.ConfigError,
 				HttpClient.HttpClient
 			> {
-				return Layer.unwrapEffect(
-					Effect.gen(this, function* () {
+				const layer = this.layer
+				return Layer.unwrap(
+					Effect.gen(function* () {
 						const apiKey = yield* Config.redacted("ATTIO_API_KEY")
 						const baseUrl = yield* Config.string("ATTIO_BASE_URL").pipe(
 							Config.withDefault("https://api.attio.com"),
 						)
 
-						return this.Default({ apiKey, baseUrl })
+						return layer({ apiKey, baseUrl })
 					}),
 				)
 			},

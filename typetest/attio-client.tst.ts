@@ -49,6 +49,22 @@ describe("AttioClient", () => {
 		})
 	})
 
+	it("supports current record query parameters", () => {
+		expect(client.invoices.list).type.toBeCallableWith({
+			filter_view_id: "550e8400-e29b-41d4-a716-446655440000",
+			sorts: [
+				{
+					direction: "asc",
+					path: [["invoices", "customer"]],
+				},
+			],
+		})
+		expect(client.invoices.list).type.not.toBeCallableWith({
+			filter: { invoiceNumber: "INV-001" },
+			filter_view_id: "550e8400-e29b-41d4-a716-446655440000",
+		})
+	})
+
 	it("preserves configured list methods", () => {
 		expect(client.lists.opportunities.create).type.toBeCallableWith({
 			parent_record_id: "550e8400-e29b-41d4-a716-446655440000",
@@ -62,6 +78,35 @@ describe("AttioClient", () => {
 			parent_record_id: "550e8400-e29b-41d4-a716-446655440000",
 			parent_object: "companies",
 			entry_values: { unknownField: "value" },
+		})
+	})
+
+	it("supports saved-view list entry queries", () => {
+		expect(client.lists.opportunities.list).type.toBeCallableWith({
+			filter_view_id: "550e8400-e29b-41d4-a716-446655440000",
+		})
+		expect(client.lists.opportunities.list).type.not.toBeCallableWith({
+			filter: { title: "New opportunity" },
+			filter_view_id: "550e8400-e29b-41d4-a716-446655440000",
+		})
+	})
+
+	it("supports current task list parameters", () => {
+		expect(client.tasks.list).type.toBeCallableWith({
+			sort: "completed_at:desc",
+			assignee: "alice@example.com",
+		})
+	})
+
+	it("supports current note creation fields", () => {
+		expect(client.notes.create).type.toBeCallableWith({
+			parent_object: "people",
+			parent_record_id: "550e8400-e29b-41d4-a716-446655440000",
+			title: "Imported note",
+			content: "Imported content",
+			format: "plaintext",
+			created_at: "2025-01-01T12:00:00Z",
+			meeting_id: "550e8400-e29b-41d4-a716-446655440000",
 		})
 	})
 

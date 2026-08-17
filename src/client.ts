@@ -56,15 +56,15 @@ type AttioClientShape<T extends AttioClientSchemas> = {
 			CreatedSchemas<ConfiguredLists<T>[K], "entry_id">["output"],
 			CreatedSchemas<ConfiguredLists<T>[K], "entry_id">["fields"]
 		>
-	} & AttioLists
-	comments: AttioComments
-	threads: AttioThreads
-	tasks: AttioTasks
-	notes: AttioNotes
-	objects: AttioObjects
-	meta: AttioMeta
-	webhooks: AttioWebhooks
-	workspaceMembers: AttioWorkspaceMembers
+	} & AttioLists["Service"]
+	comments: AttioComments["Service"]
+	threads: AttioThreads["Service"]
+	tasks: AttioTasks["Service"]
+	notes: AttioNotes["Service"]
+	objects: AttioObjects["Service"]
+	meta: AttioMeta["Service"]
+	webhooks: AttioWebhooks["Service"]
+	workspaceMembers: AttioWorkspaceMembers["Service"]
 }
 
 type AttioClientClass<

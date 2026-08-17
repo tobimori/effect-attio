@@ -35,6 +35,8 @@ export const NoteInput = Schema.Struct({
 	title: Schema.String,
 	content: Schema.String,
 	format: Schema.Literals(["plaintext", "markdown"]),
+	created_at: Schema.optional(Schema.DateTimeUtcFromString),
+	meeting_id: Schema.optional(Schema.NullOr(Uuid)),
 })
 
 export const NoteListParams = Schema.Struct({

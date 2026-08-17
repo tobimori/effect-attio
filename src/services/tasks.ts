@@ -52,10 +52,17 @@ export const TaskUpdate = Schema.Struct({
 export const TaskListParams = Schema.Struct({
 	limit: Schema.optional(Schema.Number),
 	offset: Schema.optional(Schema.Number),
-	sort: Schema.optional(Schema.Literals(["created_at:asc", "created_at:desc"])),
+	sort: Schema.optional(
+		Schema.Literals([
+			"created_at:asc",
+			"created_at:desc",
+			"completed_at:asc",
+			"completed_at:desc",
+		]),
+	),
 	linked_object: Schema.optional(Schema.String),
 	linked_record_id: Schema.optional(Uuid),
-	assignee: Schema.optional(Schema.Union([Uuid, Schema.Null])),
+	assignee: Schema.optional(Schema.Union([Schema.String, Schema.Null])),
 	is_completed: Schema.optional(Schema.Boolean),
 })
 
@@ -64,7 +71,7 @@ const makeAttioTasks = Effect.gen(function* () {
 
 	return {
 		/**
-		 * List all tasks. Results are sorted by creation date, from oldest to newest.
+		 * List tasks, with optional sorting and filtering.
 		 *
 		 * Required scopes: `task:read`, `object_configuration:read`, `record_permission:read`, `user_management:read`
 		 */

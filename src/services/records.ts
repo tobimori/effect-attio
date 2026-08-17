@@ -17,6 +17,7 @@ import {
 } from "../error-transforms.js"
 import { AttioHttpClient } from "../http-client.js"
 import type { AttributeDef } from "../schemas/attribute-builder.js"
+import { QueryParams } from "../shared/query.js"
 import { DataStruct, Uuid } from "../shared/schemas.js"
 
 const RecordId = Schema.Struct({
@@ -48,27 +49,18 @@ const makeAttioRecords = Effect.gen(function* () {
 		>(
 			object: string,
 			schema: { input: TInput; output: TOutput },
-			params?: {
-				filter?: Record<string, any>
-				sorts?: Array<{
-					direction: "asc" | "desc"
-					attribute: string
-					field?: string
-				}>
-				limit?: number
-				offset?: number
-			},
+			params?: (typeof QueryParams)["Type"],
 		) {
+			const body = yield* Schema.encodeEffect(QueryParams)({
+				...params,
+				limit: params?.limit ?? 500,
+				offset: params?.offset ?? 0,
+			})
+
 			return yield* HttpClientRequest.post(
 				`/v2/objects/${object}/records/query`,
 			).pipe(
-				// TODO: move to schema validated request (check over all services)
-				HttpClientRequest.bodyJson({
-					filter: params?.filter,
-					sorts: params?.sorts,
-					limit: params?.limit ?? 500,
-					offset: params?.offset ?? 0,
-				}),
+				HttpClientRequest.bodyJson(body),
 				Effect.flatMap(http.execute),
 				Effect.flatMap(
 					HttpClientResponse.schemaBodyJson(

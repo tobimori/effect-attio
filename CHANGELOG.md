@@ -1,5 +1,12 @@
 # effect-attio
 
+## 0.4.0
+
+### Minor Changes
+
+- 25b0a74: Migrate the SDK to Effect v4 and the consolidated Effect HTTP APIs. Service
+  layers now use the idiomatic lowercase `layer` name instead of `Default`.
+
 ## 0.3.3
 
 ### Patch Changes

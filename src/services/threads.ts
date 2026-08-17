@@ -10,6 +10,7 @@ import {
 } from "../error-transforms.js"
 import { AttioHttpClient } from "../http-client.js"
 import { DataStruct, Uuid } from "../shared/schemas.js"
+import type { ReplaceField } from "../shared/type-utils.js"
 import { Comment } from "./comments.js"
 export const ThreadId = Schema.Struct({
 	thread_id: Uuid,
@@ -79,4 +80,17 @@ export class AttioThreads extends Context.Service<
 		AttioThreads,
 		Effect.map(makeAttioThreads, AttioThreads.of),
 	)
+}
+
+export type GenericAttioThreads<TObjectName extends string> = Omit<
+	AttioThreads["Service"],
+	"list"
+> & {
+	list: (
+		params?: ReplaceField<
+			NonNullable<Parameters<AttioThreads["Service"]["list"]>[0]>,
+			"object",
+			TObjectName
+		>,
+	) => ReturnType<AttioThreads["Service"]["list"]>
 }

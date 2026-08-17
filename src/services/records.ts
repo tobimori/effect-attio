@@ -443,9 +443,7 @@ export type GenericAttioRecords<
 	) => ReturnType<typeof AttioRecords.Service.list<TInput, TOutput>>
 
 	assert: (
-		matchingAttribute: Parameters<
-			typeof AttioRecords.Service.assert<TInput, TOutput>
-		>[2],
+		matchingAttribute: Extract<keyof TFields, string>,
 		data: Parameters<typeof AttioRecords.Service.assert<TInput, TOutput>>[3],
 	) => ReturnType<typeof AttioRecords.Service.assert<TInput, TOutput>>
 

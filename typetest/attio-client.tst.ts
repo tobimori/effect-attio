@@ -49,6 +49,17 @@ describe("AttioClient", () => {
 		})
 	})
 
+	it("restricts assert matching attributes to configured fields", () => {
+		expect(client.invoices.assert).type.toBeCallableWith("invoiceNumber", {
+			invoiceNumber: "INV-001",
+			amount: 100,
+		})
+		expect(client.invoices.assert).type.not.toBeCallableWith("unknownField", {
+			invoiceNumber: "INV-001",
+			amount: 100,
+		})
+	})
+
 	it("supports current record query parameters", () => {
 		expect(client.invoices.list).type.toBeCallableWith({
 			filter_view_id: "550e8400-e29b-41d4-a716-446655440000",
@@ -78,6 +89,33 @@ describe("AttioClient", () => {
 			parent_record_id: "550e8400-e29b-41d4-a716-446655440000",
 			parent_object: "companies",
 			entry_values: { unknownField: "value" },
+		})
+		expect(client.lists.opportunities.create).type.not.toBeCallableWith({
+			parent_record_id: "550e8400-e29b-41d4-a716-446655440000",
+			parent_object: "deals",
+			entry_values: { title: "New opportunity" },
+		})
+		expect(client.lists.opportunities.assert).type.not.toBeCallableWith({
+			parent_record_id: "550e8400-e29b-41d4-a716-446655440000",
+			parent_object: "unknown_object",
+			entry_values: { title: "New opportunity" },
+		})
+	})
+
+	it("restricts list parent objects to configured objects", () => {
+		expect(client.lists.create).type.toBeCallableWith({
+			name: "Company opportunities",
+			api_slug: "company-opportunities",
+			parent_object: "companies",
+			workspace_access: "full-access",
+			workspace_member_access: [],
+		})
+		expect(client.lists.create).type.not.toBeCallableWith({
+			name: "Deal opportunities",
+			api_slug: "deal-opportunities",
+			parent_object: "deals",
+			workspace_access: "full-access",
+			workspace_member_access: [],
 		})
 	})
 
@@ -137,6 +175,67 @@ describe("AttioClient", () => {
 			format: "plaintext",
 			created_at: "2025-01-01T12:00:00Z",
 			meeting_id: "550e8400-e29b-41d4-a716-446655440000",
+		})
+	})
+
+	it("restricts note parent objects to configured objects", () => {
+		expect(client.notes.list).type.toBeCallableWith({
+			parent_object: "invoices",
+		})
+		expect(client.notes.list).type.not.toBeCallableWith({
+			parent_object: "deals",
+		})
+		expect(client.notes.create).type.not.toBeCallableWith({
+			parent_object: "deals",
+			parent_record_id: "550e8400-e29b-41d4-a716-446655440000",
+			title: "Deal note",
+			content: "Content",
+			format: "plaintext",
+		})
+	})
+
+	it("restricts thread object filters to configured objects", () => {
+		expect(client.threads.list).type.toBeCallableWith({
+			object: "people",
+			record_id: "550e8400-e29b-41d4-a716-446655440000",
+		})
+		expect(client.threads.list).type.not.toBeCallableWith({
+			object: "deals",
+			record_id: "550e8400-e29b-41d4-a716-446655440000",
+		})
+	})
+
+	it("restricts task record links to configured objects", () => {
+		const recordId = "550e8400-e29b-41d4-a716-446655440000"
+
+		expect(client.tasks.list).type.toBeCallableWith({
+			linked_object: "companies",
+			linked_record_id: recordId,
+		})
+		expect(client.tasks.list).type.not.toBeCallableWith({
+			linked_object: "deals",
+			linked_record_id: recordId,
+		})
+		expect(client.tasks.create).type.toBeCallableWith({
+			content: "Follow up",
+			format: "plaintext",
+			is_completed: false,
+			linked_records: [
+				{ target_object: "invoices", target_record_id: recordId },
+			],
+			assignees: [],
+		})
+		expect(client.tasks.create).type.not.toBeCallableWith({
+			content: "Follow up",
+			format: "plaintext",
+			is_completed: false,
+			linked_records: [{ target_object: "deals", target_record_id: recordId }],
+			assignees: [],
+		})
+		expect(client.tasks.update).type.not.toBeCallableWith(recordId, {
+			linked_records: [
+				{ target_object: "unknown_object", target_record_id: recordId },
+			],
 		})
 	})
 

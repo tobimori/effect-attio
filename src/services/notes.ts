@@ -11,6 +11,7 @@ import {
 } from "../error-transforms.js"
 import { AttioHttpClient } from "../http-client.js"
 import { Actor, DataStruct, Tag, Uuid } from "../shared/schemas.js"
+import type { ReplaceField } from "../shared/type-utils.js"
 
 export const NoteId = Schema.Struct({
 	workspace_id: Schema.String,
@@ -120,4 +121,24 @@ export class AttioNotes extends Context.Service<
 		AttioNotes,
 		Effect.map(makeAttioNotes, AttioNotes.of),
 	)
+}
+
+export type GenericAttioNotes<TObjectName extends string> = Omit<
+	AttioNotes["Service"],
+	"list" | "create"
+> & {
+	list: (
+		params?: ReplaceField<
+			NonNullable<Parameters<AttioNotes["Service"]["list"]>[0]>,
+			"parent_object",
+			TObjectName
+		>,
+	) => ReturnType<AttioNotes["Service"]["list"]>
+	create: (
+		note: ReplaceField<
+			Parameters<AttioNotes["Service"]["create"]>[0],
+			"parent_object",
+			TObjectName
+		>,
+	) => ReturnType<AttioNotes["Service"]["create"]>
 }

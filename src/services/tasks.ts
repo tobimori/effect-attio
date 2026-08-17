@@ -18,6 +18,7 @@ import {
 	LinkedRecordOutput,
 	Uuid,
 } from "../shared/schemas.js"
+import type { ReplaceField } from "../shared/type-utils.js"
 export const TaskId = Schema.Struct({
 	workspace_id: Schema.String,
 	task_id: Schema.String,
@@ -171,4 +172,38 @@ export class AttioTasks extends Context.Service<
 		AttioTasks,
 		Effect.map(makeAttioTasks, AttioTasks.of),
 	)
+}
+
+type ConfiguredLinkedRecord<TObjectName extends string> = ReplaceField<
+	(typeof LinkedRecordInput)["Encoded"],
+	"target_object",
+	TObjectName
+>
+
+export type GenericAttioTasks<TObjectName extends string> = Omit<
+	AttioTasks["Service"],
+	"list" | "create" | "update"
+> & {
+	list: (
+		params?: ReplaceField<
+			NonNullable<Parameters<AttioTasks["Service"]["list"]>[0]>,
+			"linked_object",
+			TObjectName
+		>,
+	) => ReturnType<AttioTasks["Service"]["list"]>
+	create: (
+		task: ReplaceField<
+			Parameters<AttioTasks["Service"]["create"]>[0],
+			"linked_records",
+			ReadonlyArray<ConfiguredLinkedRecord<TObjectName>>
+		>,
+	) => ReturnType<AttioTasks["Service"]["create"]>
+	update: (
+		taskId: Parameters<AttioTasks["Service"]["update"]>[0],
+		task: ReplaceField<
+			Parameters<AttioTasks["Service"]["update"]>[1],
+			"linked_records",
+			ReadonlyArray<ConfiguredLinkedRecord<TObjectName>>
+		>,
+	) => ReturnType<AttioTasks["Service"]["update"]>
 }

@@ -16,13 +16,13 @@ import type { CreatedSchemas } from "./schemas/helpers.js"
 import type { AttributeDef } from "./schemas/attribute-builder.js"
 import { AttioComments } from "./services/comments.js"
 import { AttioEntries, type GenericAttioEntries } from "./services/entries.js"
-import { AttioLists } from "./services/lists.js"
+import { AttioLists, type GenericAttioLists } from "./services/lists.js"
 import { AttioMeta } from "./services/meta.js"
-import { AttioNotes } from "./services/notes.js"
+import { AttioNotes, type GenericAttioNotes } from "./services/notes.js"
 import { AttioObjects } from "./services/objects.js"
 import { AttioRecords, type GenericAttioRecords } from "./services/records.js"
-import { AttioTasks } from "./services/tasks.js"
-import { AttioThreads } from "./services/threads.js"
+import { AttioTasks, type GenericAttioTasks } from "./services/tasks.js"
+import { AttioThreads, type GenericAttioThreads } from "./services/threads.js"
 import { AttioWebhooks } from "./services/webhooks.js"
 import { AttioWorkspaceMembers } from "./services/workspace-members.js"
 
@@ -33,6 +33,11 @@ type ConfiguredObjects<T extends AttioClientSchemas> =
 
 type ConfiguredLists<T extends AttioClientSchemas> =
 	T["lists"] extends Record<string, ListConfig> ? T["lists"] : EmptyRecord
+
+type ConfiguredObjectName<T extends AttioClientSchemas> = Extract<
+	keyof MergedObjectFields<ConfiguredObjects<T>>,
+	string
+>
 
 type AttioClientShape<T extends AttioClientSchemas> = {
 	[K in keyof MergedObjectFields<ConfiguredObjects<T>>]: GenericAttioRecords<
@@ -54,13 +59,14 @@ type AttioClientShape<T extends AttioClientSchemas> = {
 		[K in keyof ConfiguredLists<T>]: GenericAttioEntries<
 			CreatedSchemas<ConfiguredLists<T>[K], "entry_id">["input"],
 			CreatedSchemas<ConfiguredLists<T>[K], "entry_id">["output"],
-			CreatedSchemas<ConfiguredLists<T>[K], "entry_id">["fields"]
+			CreatedSchemas<ConfiguredLists<T>[K], "entry_id">["fields"],
+			ConfiguredObjectName<T>
 		>
-	} & AttioLists["Service"]
+	} & GenericAttioLists<ConfiguredObjectName<T>>
 	comments: AttioComments["Service"]
-	threads: AttioThreads["Service"]
-	tasks: AttioTasks["Service"]
-	notes: AttioNotes["Service"]
+	threads: GenericAttioThreads<ConfiguredObjectName<T>>
+	tasks: GenericAttioTasks<ConfiguredObjectName<T>>
+	notes: GenericAttioNotes<ConfiguredObjectName<T>>
 	objects: AttioObjects["Service"]
 	meta: AttioMeta["Service"]
 	webhooks: AttioWebhooks["Service"]

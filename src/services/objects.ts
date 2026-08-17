@@ -157,7 +157,7 @@ const makeAttioObjects = Effect.gen(function* () {
 				),
 				mapAttioErrors(AttioNotFoundErrorTransform),
 			)
-		}), 
+		}),
 	}
 })
 

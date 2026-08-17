@@ -12,6 +12,7 @@ import {
 } from "../error-transforms.js"
 import { AttioHttpClient } from "../http-client.js"
 import { Actor, DataStruct, Uuid } from "../shared/schemas.js"
+import type { ReplaceField } from "../shared/type-utils.js"
 import { ViewId, ViewListParams, ViewListResponse } from "../shared/views.js"
 
 export const ListId = Schema.Struct({
@@ -198,4 +199,17 @@ export class AttioLists extends Context.Service<
 		AttioLists,
 		Effect.map(makeAttioLists, AttioLists.of),
 	)
+}
+
+export type GenericAttioLists<TObjectName extends string> = Omit<
+	AttioLists["Service"],
+	"create"
+> & {
+	create: (
+		list: ReplaceField<
+			Parameters<AttioLists["Service"]["create"]>[0],
+			"parent_object",
+			TObjectName
+		>,
+	) => ReturnType<AttioLists["Service"]["create"]>
 }

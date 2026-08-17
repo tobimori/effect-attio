@@ -408,15 +408,22 @@ export type GenericAttioEntries<
 	TInput extends Schema.Top,
 	TOutput extends Schema.Constraint,
 	TFields extends Record<string, AttributeDef>,
+	TObjectName extends string = string,
 > = {
 	list: (
 		params?: Parameters<typeof AttioEntries.Service.list<TInput, TOutput>>[2],
 	) => ReturnType<typeof AttioEntries.Service.list<TInput, TOutput>>
 	assert: (
-		data: Parameters<typeof AttioEntries.Service.assert<TInput, TOutput>>[2],
+		data: Omit<
+			Parameters<typeof AttioEntries.Service.assert<TInput, TOutput>>[2],
+			"parent_object"
+		> & { parent_object: TObjectName },
 	) => ReturnType<typeof AttioEntries.Service.assert<TInput, TOutput>>
 	create: (
-		data: Parameters<typeof AttioEntries.Service.create<TInput, TOutput>>[2],
+		data: Omit<
+			Parameters<typeof AttioEntries.Service.create<TInput, TOutput>>[2],
+			"parent_object"
+		> & { parent_object: TObjectName },
 	) => ReturnType<typeof AttioEntries.Service.create<TInput, TOutput>>
 	get: (
 		entryId: Parameters<typeof AttioEntries.Service.get<TInput, TOutput>>[2],

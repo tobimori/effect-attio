@@ -1,4 +1,7 @@
-import type { AttributeDef } from "./schemas/attribute-builder.js"
+import {
+	type AttributeDef,
+	type ReferenceTargetAttribute,
+} from "./schemas/attribute-builder.js"
 import { createSchemas, type CreatedSchemas } from "./schemas/helpers.js"
 import type * as Objects from "./schemas/objects.js"
 import * as StandardObjects from "./schemas/objects.js"
@@ -26,12 +29,45 @@ export const DEFAULT_DISABLED_OBJECTS = [
 	"workspaces",
 ] as const
 
+type ExplicitlyEnabledObjectNames<T extends Record<string, ObjectConfig>> = {
+	[K in keyof T]: T[K] extends false ? never : K
+}[keyof T]
+
+type DefaultEnabledObjectNames<T extends Record<string, ObjectConfig>> = {
+	[K in keyof typeof StandardObjects]: K extends keyof T
+		? never
+		: K extends (typeof DEFAULT_DISABLED_OBJECTS)[number]
+			? never
+			: K
+}[keyof typeof StandardObjects]
+
+type AvailableObjectNames<T extends Record<string, ObjectConfig>> =
+	| ExplicitlyEnabledObjectNames<T>
+	| DefaultEnabledObjectNames<T>
+
+type ResolveReferenceFields<Fields, T extends Record<string, ObjectConfig>> = {
+	[
+		K in keyof Fields as Fields[K] extends ReferenceTargetAttribute<
+			infer ObjectName
+		>
+			? ObjectName extends AvailableObjectNames<T>
+				? K
+				: never
+			: K
+	]: Fields[K]
+}
+
+type StandardObjectFields<
+	K extends keyof typeof StandardObjects,
+	T extends Record<string, ObjectConfig>,
+> = ResolveReferenceFields<(typeof StandardObjects)[K], T>
+
 export type EnabledObjects<T extends Record<string, ObjectConfig>> = {
 	[K in keyof T as T[K] extends false ? never : K]: T[K] extends false
 		? never
 		: T[K] extends true
 			? K extends keyof typeof StandardObjects
-				? (typeof StandardObjects)[K]
+				? StandardObjectFields<K, T>
 				: never
 			: T[K] extends Record<string, AttributeLike>
 				? T[K]
@@ -40,7 +76,7 @@ export type EnabledObjects<T extends Record<string, ObjectConfig>> = {
 
 export type MergedObjectFields<T extends Record<string, ObjectConfig>> = {
 	[K in keyof EnabledObjects<T>]: K extends keyof typeof StandardObjects
-		? (typeof StandardObjects)[K] & EnabledObjects<T>[K]
+		? StandardObjectFields<K, T> & EnabledObjects<T>[K]
 		: EnabledObjects<T>[K]
 } & {
 	[
@@ -51,7 +87,28 @@ export type MergedObjectFields<T extends Record<string, ObjectConfig>> = {
 			: K extends (typeof DEFAULT_DISABLED_OBJECTS)[number]
 				? never
 				: K
-	]: (typeof StandardObjects)[K]
+	]: StandardObjectFields<K, T>
+}
+
+function resolveReferenceFields(
+	fields: Record<string, AttributeLike>,
+	configuredObjects: Record<string, ObjectConfig>,
+) {
+	return Object.fromEntries(
+		Object.entries(fields).filter(([, field]) => {
+			const referenceTarget = field.referenceTarget
+
+			return (
+				referenceTarget === undefined ||
+				(Object.hasOwn(configuredObjects, referenceTarget)
+					? configuredObjects[referenceTarget] !== false
+					: Object.hasOwn(StandardObjects, referenceTarget) &&
+						!DEFAULT_DISABLED_OBJECTS.includes(
+							referenceTarget as (typeof DEFAULT_DISABLED_OBJECTS)[number],
+						))
+			)
+		}),
+	)
 }
 
 export function processSchemas<
@@ -60,12 +117,17 @@ export function processSchemas<
 >(config: AttioClientSchemas<T, L>) {
 	const objectSchemas = {} as any
 	const listSchemas = {} as any
+	const configuredObjects: Record<string, ObjectConfig> = config.objects ?? {}
 
 	// process objects
-	for (const [name, objectConfig] of Object.entries(config.objects ?? [])) {
+	for (const [name, objectConfig] of Object.entries(configuredObjects)) {
 		if (objectConfig === false) continue
 
-		const standardFields = StandardObjects[name as keyof typeof StandardObjects]
+		const unfilteredStandardFields =
+			StandardObjects[name as keyof typeof StandardObjects]
+		const standardFields = unfilteredStandardFields
+			? resolveReferenceFields(unfilteredStandardFields, configuredObjects)
+			: undefined
 
 		if (standardFields) {
 			if (objectConfig === true) {
@@ -92,7 +154,10 @@ export function processSchemas<
 				continue
 			}
 
-			objectSchemas[name] = createSchemas(fields, "record_id")
+			objectSchemas[name] = createSchemas(
+				resolveReferenceFields(fields, configuredObjects),
+				"record_id",
+			)
 		}
 	}
 

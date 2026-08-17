@@ -2,14 +2,6 @@ import * as Schema from "effect/Schema"
 import type { AttributeDef } from "./attribute-builder.js"
 import * as Attributes from "./attributes.js"
 
-/**
- * Helper for optional fields that may not be present in the response
- */
-export const OptionalAttribute = <T extends AttributeDef>(field: T) => ({
-	input: Schema.optional(field.input),
-	output: Schema.optional(field.output),
-})
-
 type AttributeLike = AttributeDef
 
 type BaseAttributes<IdField extends "record_id" | "entry_id"> = {

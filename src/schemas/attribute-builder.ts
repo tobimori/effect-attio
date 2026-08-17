@@ -7,6 +7,59 @@ import { Actor } from "../shared/schemas.js"
 export interface AttributeDef {
 	input: Schema.Top
 	output: Schema.Top
+	readonly referenceTarget?: string
+}
+
+type WithReferenceTarget<
+	ObjectName extends string,
+	Field extends AttributeDef,
+> = Field & { readonly referenceTarget: ObjectName }
+
+type ReferenceTargetVariations<
+	ObjectName extends string,
+	Field extends AttributeDef,
+> = {
+	readonly [
+		K in keyof Field as K extends "Required" | "ReadOnly" ? K : never
+	]: Field[K] extends AttributeDef
+		? WithReferenceTarget<ObjectName, Field[K]>
+		: Field[K]
+}
+
+export type ReferenceTargetAttribute<
+	ObjectName extends string,
+	Field extends AttributeDef = AttributeDef,
+> = WithReferenceTarget<ObjectName, Field> &
+	ReferenceTargetVariations<ObjectName, Field> &
+	(Field extends { Multiple: infer Multiple extends AttributeDef }
+		? {
+				readonly Multiple: WithReferenceTarget<ObjectName, Multiple> &
+					ReferenceTargetVariations<ObjectName, Multiple>
+			}
+		: {})
+
+export const withReferenceTarget = <
+	const ObjectName extends string,
+	Field extends AttributeDef,
+>(
+	objectName: ObjectName,
+	field: Field,
+): ReferenceTargetAttribute<ObjectName, Field> => {
+	const mark = (attribute: AttributeDef) => {
+		Object.defineProperty(attribute, "referenceTarget", { value: objectName })
+
+		for (const variation of ["Required", "ReadOnly", "Multiple"] as const) {
+			const nestedAttribute = (
+				attribute as AttributeDef &
+					Partial<Record<typeof variation, AttributeDef>>
+			)[variation]
+
+			if (nestedAttribute) mark(nestedAttribute)
+		}
+	}
+
+	mark(field)
+	return field as ReferenceTargetAttribute<ObjectName, Field>
 }
 
 export const BaseAttribute = Schema.Struct({

@@ -1,6 +1,6 @@
 import * as Schema from "effect/Schema"
 import { Actor, Uuid } from "../shared/schemas.js"
-import { makeAttribute } from "./attribute-builder.js"
+import { makeAttribute, withReferenceTarget } from "./attribute-builder.js"
 import { CountryCode, CurrencyCode } from "./values.js"
 
 /**
@@ -399,22 +399,49 @@ export const Rating = makeAttribute({
  *
  * @see https://docs.attio.com/docs/attribute-types/attribute-types-record-reference
  */
-export const RecordReference = makeAttribute(
-	{
-		input: Schema.Union([
-			Uuid, // Record ID
-			Schema.Struct({
+const makeRecordReferenceFor = <const ObjectName extends string>(
+	objectName: ObjectName,
+) =>
+	withReferenceTarget(
+		objectName,
+		makeAttribute(
+			{
+				input: Schema.Union([
+					Uuid,
+					Schema.Struct({
+						target_object: Schema.Literal(objectName),
+						target_record_id: Uuid,
+					}),
+				]),
+				output: Schema.Struct({
+					attribute_type: Schema.Literal("record-reference"),
+					target_object: Schema.Literal(objectName),
+					target_record_id: Uuid,
+				}),
+			},
+			{ multiple: true },
+		),
+	)
+
+export const RecordReference = Object.assign(
+	makeAttribute(
+		{
+			input: Schema.Union([
+				Uuid, // Record ID
+				Schema.Struct({
+					target_object: Schema.String,
+					target_record_id: Uuid,
+				}),
+			]),
+			output: Schema.Struct({
+				attribute_type: Schema.Literal("record-reference"),
 				target_object: Schema.String,
 				target_record_id: Uuid,
 			}),
-		]),
-		output: Schema.Struct({
-			attribute_type: Schema.Literal("record-reference"),
-			target_object: Schema.String,
-			target_record_id: Uuid,
-		}),
-	},
-	{ multiple: true },
+		},
+		{ multiple: true },
+	),
+	{ For: makeRecordReferenceFor },
 )
 
 /**
@@ -427,27 +454,30 @@ export const RecordReference = makeAttribute(
  *
  * @see https://docs.attio.com/docs/attribute-types/attribute-types-record-reference
  */
-export const CompanyRecordReference = makeAttribute(
-	{
-		input: Schema.Union([
-			Schema.String, // Domain string
-			Uuid, // Record ID
-			Schema.Struct({
+export const CompanyRecordReference = withReferenceTarget(
+	"companies",
+	makeAttribute(
+		{
+			input: Schema.Union([
+				Schema.String, // Domain string
+				Uuid, // Record ID
+				Schema.Struct({
+					target_object: Schema.Literal("companies"),
+					target_record_id: Uuid,
+				}),
+				Schema.Struct({
+					domains: Schema.Array(Schema.Struct({ domain: Schema.String })),
+					target_object: Schema.Literal("companies"),
+				}),
+			]),
+			output: Schema.Struct({
+				attribute_type: Schema.Literal("record-reference"),
 				target_object: Schema.Literal("companies"),
 				target_record_id: Uuid,
 			}),
-			Schema.Struct({
-				domains: Schema.Array(Schema.Struct({ domain: Schema.String })),
-				target_object: Schema.Literal("companies"),
-			}),
-		]),
-		output: Schema.Struct({
-			attribute_type: Schema.Literal("record-reference"),
-			target_object: Schema.Literal("companies"),
-			target_record_id: Uuid,
-		}),
-	},
-	{ multiple: true },
+		},
+		{ multiple: true },
+	),
 )
 
 /**
@@ -460,29 +490,32 @@ export const CompanyRecordReference = makeAttribute(
  *
  * @see https://docs.attio.com/docs/attribute-types/attribute-types-record-reference
  */
-export const PersonRecordReference = makeAttribute(
-	{
-		input: Schema.Union([
-			Schema.String, // Email string
-			Uuid, // Record ID
-			Schema.Struct({
+export const PersonRecordReference = withReferenceTarget(
+	"people",
+	makeAttribute(
+		{
+			input: Schema.Union([
+				Schema.String, // Email string
+				Uuid, // Record ID
+				Schema.Struct({
+					target_object: Schema.Literal("people"),
+					target_record_id: Uuid,
+				}),
+				Schema.Struct({
+					email_addresses: Schema.Array(
+						Schema.Struct({ email_address: Schema.String }),
+					),
+					target_object: Schema.Literal("people"),
+				}),
+			]),
+			output: Schema.Struct({
+				attribute_type: Schema.Literal("record-reference"),
 				target_object: Schema.Literal("people"),
 				target_record_id: Uuid,
 			}),
-			Schema.Struct({
-				email_addresses: Schema.Array(
-					Schema.Struct({ email_address: Schema.String }),
-				),
-				target_object: Schema.Literal("people"),
-			}),
-		]),
-		output: Schema.Struct({
-			attribute_type: Schema.Literal("record-reference"),
-			target_object: Schema.Literal("people"),
-			target_record_id: Uuid,
-		}),
-	},
-	{ multiple: true },
+		},
+		{ multiple: true },
+	),
 )
 
 /**
@@ -494,23 +527,7 @@ export const PersonRecordReference = makeAttribute(
  *
  * @see https://docs.attio.com/docs/attribute-types/attribute-types-record-reference
  */
-export const DealRecordReference = makeAttribute(
-	{
-		input: Schema.Union([
-			Uuid, // Record ID
-			Schema.Struct({
-				target_object: Schema.Literal("deals"),
-				target_record_id: Uuid,
-			}),
-		]),
-		output: Schema.Struct({
-			attribute_type: Schema.Literal("record-reference"),
-			target_object: Schema.Literal("deals"),
-			target_record_id: Uuid,
-		}),
-	},
-	{ multiple: true },
-)
+export const DealRecordReference = RecordReference.For("deals")
 
 /**
  * # User record reference
@@ -522,27 +539,30 @@ export const DealRecordReference = makeAttribute(
  *
  * @see https://docs.attio.com/docs/attribute-types/attribute-types-record-reference
  */
-export const UserRecordReference = makeAttribute(
-	{
-		input: Schema.Union([
-			Schema.String, // User ID string
-			Uuid, // Record ID
-			Schema.Struct({
+export const UserRecordReference = withReferenceTarget(
+	"users",
+	makeAttribute(
+		{
+			input: Schema.Union([
+				Schema.String, // User ID string
+				Uuid, // Record ID
+				Schema.Struct({
+					target_object: Schema.Literal("users"),
+					target_record_id: Uuid,
+				}),
+				Schema.Struct({
+					user_id: Schema.Array(Schema.Struct({ value: Schema.String })),
+					target_object: Schema.Literal("users"),
+				}),
+			]),
+			output: Schema.Struct({
+				attribute_type: Schema.Literal("record-reference"),
 				target_object: Schema.Literal("users"),
 				target_record_id: Uuid,
 			}),
-			Schema.Struct({
-				user_id: Schema.Array(Schema.Struct({ value: Schema.String })),
-				target_object: Schema.Literal("users"),
-			}),
-		]),
-		output: Schema.Struct({
-			attribute_type: Schema.Literal("record-reference"),
-			target_object: Schema.Literal("users"),
-			target_record_id: Uuid,
-		}),
-	},
-	{ multiple: true },
+		},
+		{ multiple: true },
+	),
 )
 
 /**
@@ -555,27 +575,30 @@ export const UserRecordReference = makeAttribute(
  *
  * @see https://docs.attio.com/docs/attribute-types/attribute-types-record-reference
  */
-export const WorkspaceRecordReference = makeAttribute(
-	{
-		input: Schema.Union([
-			Schema.String, // Workspace ID string
-			Uuid, // Record ID
-			Schema.Struct({
+export const WorkspaceRecordReference = withReferenceTarget(
+	"workspaces",
+	makeAttribute(
+		{
+			input: Schema.Union([
+				Schema.String, // Workspace ID string
+				Uuid, // Record ID
+				Schema.Struct({
+					target_object: Schema.Literal("workspaces"),
+					target_record_id: Uuid,
+				}),
+				Schema.Struct({
+					workspace_id: Schema.Array(Schema.Struct({ value: Schema.String })),
+					target_object: Schema.Literal("workspaces"),
+				}),
+			]),
+			output: Schema.Struct({
+				attribute_type: Schema.Literal("record-reference"),
 				target_object: Schema.Literal("workspaces"),
 				target_record_id: Uuid,
 			}),
-			Schema.Struct({
-				workspace_id: Schema.Array(Schema.Struct({ value: Schema.String })),
-				target_object: Schema.Literal("workspaces"),
-			}),
-		]),
-		output: Schema.Struct({
-			attribute_type: Schema.Literal("record-reference"),
-			target_object: Schema.Literal("workspaces"),
-			target_record_id: Uuid,
-		}),
-	},
-	{ multiple: true },
+		},
+		{ multiple: true },
+	),
 )
 
 /**

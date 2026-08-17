@@ -101,3 +101,22 @@ Effect.runPromise(
 	),
 )
 ```
+
+## Custom object references
+
+Use `RecordReference.For` to create a reference with a specific custom object target:
+
+```typescript
+const ProjectReference = Attributes.RecordReference.For("projects")
+
+class MyAttioClient extends AttioClient<MyAttioClient>()("MyAttioClient", {
+	objects: {
+		invoices: {
+			project: ProjectReference,
+			related_projects: ProjectReference.Multiple,
+		},
+	},
+}) {}
+```
+
+The target stays as the `"projects"` literal in input and output types. The `Required`, `ReadOnly`, and `Multiple` variants are also available.

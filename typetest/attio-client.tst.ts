@@ -10,7 +10,7 @@ class TestAttioClient extends AttioClient<TestAttioClient>()(
 		objects: {
 			companies: true,
 			invoices: {
-				invoiceNumber: Attributes.Text.Required,
+				invoice_number: Attributes.Text.Required,
 				amount: Attributes.Currency.Required,
 			},
 		},
@@ -26,6 +26,29 @@ class TestAttioClient extends AttioClient<TestAttioClient>()(
 declare const client: TestAttioClient["Service"]
 
 describe("AttioClient", () => {
+	it("requires snake-case configured attribute slugs", () => {
+		const defineClient = AttioClient<object>()
+
+		expect(defineClient).type.toBeCallableWith("SnakeCaseClient", {
+			objects: {
+				invoices: { invoice_number: Attributes.Text },
+			},
+			lists: {
+				opportunities: { expected_close_date: Attributes.Date },
+			},
+		})
+		expect(defineClient).type.not.toBeCallableWith("CamelCaseClient", {
+			objects: {
+				invoices: { invoiceNumber: Attributes.Text },
+			},
+		})
+		expect(defineClient).type.not.toBeCallableWith("KebabCaseClient", {
+			lists: {
+				opportunities: { "expected-close-date": Attributes.Date },
+			},
+		})
+	})
+
 	it("has exact layer signatures", () => {
 		const layer = TestAttioClient.layer({
 			apiKey: Redacted.make("test-api-key"),
@@ -41,7 +64,7 @@ describe("AttioClient", () => {
 
 	it("preserves configured object methods", () => {
 		expect(client.invoices.create).type.toBeCallableWith({
-			invoiceNumber: "INV-001",
+			invoice_number: "INV-001",
 			amount: 100,
 		})
 		expect(client.invoices.create).type.not.toBeCallableWith({
@@ -50,12 +73,12 @@ describe("AttioClient", () => {
 	})
 
 	it("restricts assert matching attributes to configured fields", () => {
-		expect(client.invoices.assert).type.toBeCallableWith("invoiceNumber", {
-			invoiceNumber: "INV-001",
+		expect(client.invoices.assert).type.toBeCallableWith("invoice_number", {
+			invoice_number: "INV-001",
 			amount: 100,
 		})
 		expect(client.invoices.assert).type.not.toBeCallableWith("unknownField", {
-			invoiceNumber: "INV-001",
+			invoice_number: "INV-001",
 			amount: 100,
 		})
 	})
@@ -71,7 +94,7 @@ describe("AttioClient", () => {
 			],
 		})
 		expect(client.invoices.list).type.not.toBeCallableWith({
-			filter: { invoiceNumber: "INV-001" },
+			filter: { invoice_number: "INV-001" },
 			filter_view_id: "550e8400-e29b-41d4-a716-446655440000",
 		})
 	})

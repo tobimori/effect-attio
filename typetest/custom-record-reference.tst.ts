@@ -9,9 +9,9 @@ class CustomRecordReferenceClient extends AttioClient<CustomRecordReferenceClien
 	{
 		objects: {
 			invoices: {
-				invoiceNumber: Attributes.Text.Required,
-				customObject: CustomObjectReference,
-				customObjects: CustomObjectReference.Multiple,
+				invoice_number: Attributes.Text.Required,
+				custom_object: CustomObjectReference,
+				custom_objects: CustomObjectReference.Multiple,
 			},
 		},
 	},
@@ -24,9 +24,9 @@ const recordId = "550e8400-e29b-41d4-a716-446655440000"
 describe("Custom record references", () => {
 	it("accepts the configured target object", () => {
 		expect(client.invoices.create).type.toBeCallableWith({
-			invoiceNumber: "INV-001",
-			customObject: recordId,
-			customObjects: [
+			invoice_number: "INV-001",
+			custom_object: recordId,
+			custom_objects: [
 				{
 					target_object: "custom_objects",
 					target_record_id: recordId,
@@ -37,8 +37,8 @@ describe("Custom record references", () => {
 
 	it("rejects a different target object", () => {
 		expect(client.invoices.create).type.not.toBeCallableWith({
-			invoiceNumber: "INV-002",
-			customObject: {
+			invoice_number: "INV-002",
+			custom_object: {
 				target_object: "other_objects",
 				target_record_id: recordId,
 			},
@@ -54,11 +54,11 @@ describe("Custom record references", () => {
 			>
 				? Success
 				: never
-		type CustomObject = NonNullable<Invoice["values"]["customObject"]>
+		type CustomObject = NonNullable<Invoice["values"]["custom_object"]>
 
 		expect<CustomObject["target_object"]>().type.toBe<"custom_objects">()
 		expect<
-			Invoice["values"]["customObjects"][number]["target_object"]
+			Invoice["values"]["custom_objects"][number]["target_object"]
 		>().type.toBe<"custom_objects">()
 	})
 })

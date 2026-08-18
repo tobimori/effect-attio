@@ -8,6 +8,56 @@ import * as StandardObjects from "./schemas/objects.js"
 
 type AttributeLike = AttributeDef
 
+type Digit = `${0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9}`
+
+type IsSnakeCaseCharacter<T extends string> = T extends Digit
+	? true
+	: T extends Lowercase<T>
+		? T extends Uppercase<T>
+			? false
+			: true
+		: false
+
+type IsSnakeCaseWord<T extends string> = T extends ""
+	? false
+	: T extends `${infer Character}${infer Rest}`
+		? IsSnakeCaseCharacter<Character> extends true
+			? Rest extends ""
+				? true
+				: IsSnakeCaseWord<Rest>
+			: false
+		: false
+
+type IsSnakeCase<T extends string> = string extends T
+	? true
+	: T extends `${infer Word}_${infer Rest}`
+		? IsSnakeCaseWord<Word> extends true
+			? IsSnakeCase<Rest>
+			: false
+		: IsSnakeCaseWord<T>
+
+type ValidateAttributeSlugs<T> =
+	T extends Record<string, AttributeLike>
+		? {
+				[K in keyof T]: K extends string
+					? IsSnakeCase<K> extends true
+						? T[K]
+						: never
+					: T[K]
+			}
+		: T
+
+type ValidateResourceAttributeSlugs<T> =
+	T extends Record<string, unknown>
+		? { [K in keyof T]: ValidateAttributeSlugs<T[K]> }
+		: T
+
+export type ValidateAttioClientSchemas<T extends AttioClientSchemas> = {
+	[K in keyof T]: K extends "objects" | "lists"
+		? ValidateResourceAttributeSlugs<T[K]>
+		: T[K]
+}
+
 export type ObjectConfig = boolean | Record<string, AttributeLike>
 export type ListConfig = Record<string, AttributeLike>
 

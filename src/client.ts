@@ -10,6 +10,7 @@ import {
 	type MergedObjectFields,
 	type ObjectConfig,
 	processSchemas,
+	type ValidateAttioClientSchemas,
 } from "./config.js"
 import { AttioHttpClient, type AttioHttpClientOptions } from "./http-client.js"
 import type { CreatedSchemas } from "./schemas/helpers.js"
@@ -98,18 +99,13 @@ const genericTag =
 		return Object.assign(tag, members(tag as any)) as any
 	}
 
-export const AttioClient: <Self>() => <
-	Tag extends string,
-	T extends AttioClientSchemas = AttioClientSchemas,
->(
-	tag: Tag,
-	config?: T,
-) => AttioClientClass<Self, Tag, T> =
+export const AttioClient =
 	<Self>() =>
 	<Tag extends string, T extends AttioClientSchemas = AttioClientSchemas>(
 		tag: Tag,
-		config: T = {} as T,
-	) =>
+		config: T & ValidateAttioClientSchemas<NoInfer<T>> = {} as T &
+			ValidateAttioClientSchemas<NoInfer<T>>,
+	): AttioClientClass<Self, Tag, T> =>
 		genericTag<Self, AttioClientShape<T>>()(tag)((tag) => ({
 			layer(opts: AttioHttpClientOptions) {
 				return Layer.effect(

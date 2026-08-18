@@ -92,6 +92,7 @@ describe("AttioClient", () => {
 		expect(client.invoices.create).type.toBeCallableWith({
 			invoice_number: "INV-001",
 			amount: 100,
+			company: "550e8400-e29b-41d4-a716-446655440000",
 		})
 		expect(client.invoices.create).type.not.toBeCallableWith({
 			unknownField: "value",

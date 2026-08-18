@@ -27,6 +27,7 @@ describe("Custom record references", () => {
 			invoice_number: "INV-001",
 			custom_object: recordId,
 			custom_objects: [
+				{ target_record_id: recordId },
 				{
 					target_object: "custom_objects",
 					target_record_id: recordId,

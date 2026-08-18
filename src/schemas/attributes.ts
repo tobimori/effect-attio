@@ -1,4 +1,5 @@
 import * as Schema from "effect/Schema"
+import * as SchemaTransformation from "effect/SchemaTransformation"
 import { Actor, Uuid } from "../shared/schemas.js"
 import { makeAttribute, withReferenceTarget } from "./attribute-builder.js"
 import { CountryCode, CurrencyCode } from "./values.js"
@@ -400,6 +401,44 @@ export const Rating = makeAttribute({
  *
  * @see https://docs.attio.com/docs/attribute-types/attribute-types-record-reference
  */
+const recordReferenceInputFor = <const ObjectName extends string>(
+	objectName: ObjectName,
+) => {
+	const reference = Schema.Struct({
+		target_object: Schema.Literal(objectName),
+		target_record_id: Uuid,
+	})
+	const referenceWithoutObject = Schema.Struct({ target_record_id: Uuid })
+
+	return Schema.Union([
+		reference.pipe(
+			Schema.decodeTo(
+				Uuid,
+				SchemaTransformation.transform({
+					decode: ({ target_record_id }) => target_record_id,
+					encode: (target_record_id) => ({
+						target_object: objectName,
+						target_record_id,
+					}),
+				}),
+			),
+		),
+		reference.pipe(
+			Schema.decodeTo(
+				referenceWithoutObject,
+				SchemaTransformation.transform({
+					decode: ({ target_record_id }) => ({ target_record_id }),
+					encode: ({ target_record_id }) => ({
+						target_object: objectName,
+						target_record_id,
+					}),
+				}),
+			),
+		),
+		reference,
+	])
+}
+
 const makeRecordReferenceFor = <const ObjectName extends string>(
 	objectName: ObjectName,
 ) =>
@@ -407,13 +446,7 @@ const makeRecordReferenceFor = <const ObjectName extends string>(
 		objectName,
 		makeAttribute(
 			{
-				input: Schema.Union([
-					Uuid,
-					Schema.Struct({
-						target_object: Schema.Literal(objectName),
-						target_record_id: Uuid,
-					}),
-				]),
+				input: recordReferenceInputFor(objectName),
 				output: Schema.Struct({
 					attribute_type: Schema.Literal("record-reference"),
 					target_object: Schema.Literal(objectName),
@@ -427,13 +460,10 @@ const makeRecordReferenceFor = <const ObjectName extends string>(
 export const RecordReference = Object.assign(
 	makeAttribute(
 		{
-			input: Schema.Union([
-				Uuid, // Record ID
-				Schema.Struct({
-					target_object: Schema.String,
-					target_record_id: Uuid,
-				}),
-			]),
+			input: Schema.Struct({
+				target_object: Schema.String,
+				target_record_id: Uuid,
+			}),
 			output: Schema.Struct({
 				attribute_type: Schema.Literal("record-reference"),
 				target_object: Schema.String,
@@ -460,12 +490,8 @@ export const CompanyRecordReference = withReferenceTarget(
 	makeAttribute(
 		{
 			input: Schema.Union([
+				recordReferenceInputFor("companies"),
 				Schema.String, // Domain string
-				Uuid, // Record ID
-				Schema.Struct({
-					target_object: Schema.Literal("companies"),
-					target_record_id: Uuid,
-				}),
 				Schema.Struct({
 					domains: Schema.Array(Schema.Struct({ domain: Schema.String })),
 					target_object: Schema.Literal("companies"),
@@ -496,12 +522,8 @@ export const PersonRecordReference = withReferenceTarget(
 	makeAttribute(
 		{
 			input: Schema.Union([
+				recordReferenceInputFor("people"),
 				Schema.String, // Email string
-				Uuid, // Record ID
-				Schema.Struct({
-					target_object: Schema.Literal("people"),
-					target_record_id: Uuid,
-				}),
 				Schema.Struct({
 					email_addresses: Schema.Array(
 						Schema.Struct({ email_address: Schema.String }),
@@ -545,12 +567,8 @@ export const UserRecordReference = withReferenceTarget(
 	makeAttribute(
 		{
 			input: Schema.Union([
+				recordReferenceInputFor("users"),
 				Schema.String, // User ID string
-				Uuid, // Record ID
-				Schema.Struct({
-					target_object: Schema.Literal("users"),
-					target_record_id: Uuid,
-				}),
 				Schema.Struct({
 					user_id: Schema.Array(Schema.Struct({ value: Schema.String })),
 					target_object: Schema.Literal("users"),
@@ -581,12 +599,8 @@ export const WorkspaceRecordReference = withReferenceTarget(
 	makeAttribute(
 		{
 			input: Schema.Union([
+				recordReferenceInputFor("workspaces"),
 				Schema.String, // Workspace ID string
-				Uuid, // Record ID
-				Schema.Struct({
-					target_object: Schema.Literal("workspaces"),
-					target_record_id: Uuid,
-				}),
 				Schema.Struct({
 					workspace_id: Schema.Array(Schema.Struct({ value: Schema.String })),
 					target_object: Schema.Literal("workspaces"),

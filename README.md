@@ -208,9 +208,19 @@ Use `RecordReference.For` to create a reference with a specific custom object ta
 class MyAttioClient extends AttioClient<MyAttioClient>()("MyAttioClient", {
 	objects: {
 		invoices: {
+			company: Attributes.CompanyRecordReference,
 			project: Attributes.RecordReference.For("projects"),
 			related_projects: Attributes.RecordReference.For("projects").Multiple,
 		},
 	},
 }) {}
+
+const program = Effect.gen(function* () {
+	const attio = yield* MyAttioClient
+	yield* attio.invoices.create({
+		company: companyRecordId,
+		project: projectRecordId,
+		related_projects: [firstProjectRecordId, secondProjectRecordId],
+	})
+})
 ```

@@ -14,6 +14,9 @@ importers:
       '@effect/language-service':
         specifier: ^0.87.2
         version: 0.87.2
+      '@effect/vitest':
+        specifier: 4.0.0-rc.110
+        version: 4.0.0-rc.110(effect@4.0.0-rc.110)(vitest@4.1.10(vite@8.2.1))
       effect:
         specifier: 4.0.0-rc.110
         version: 4.0.0-rc.110
@@ -97,6 +100,12 @@ packages:
   '@effect/language-service@0.87.2':
     resolution: {integrity: sha512-CfiSoaVQO8pZgaMZGw5VvMvRGybsJ2LaSDoLYaqiVGvo/YYPYVR2GzUKY0h1NtIweq/+SQ5XLrvtzPIttWQ0GQ==}
     hasBin: true
+
+  '@effect/vitest@4.0.0-rc.110':
+    resolution: {integrity: sha512-ZvceBAWOPDnLgQgoObxPZOBuRTaRhBUR0K8sT4vfwwnf6Sv92GvCFp+WmfFV31j58Inf2p+wU1C3o9TNC1MZrQ==}
+    peerDependencies:
+      effect: ^4.0.0-rc.110
+      vitest: '>=4.1.0 <5.0.0'
 
   '@inquirer/external-editor@1.0.3':
     resolution: {integrity: sha512-RWbSrDiYmO4LbejWY7ttpxczuwQyZLBUyygsA9Nsv95hpzUWwnNTVQmAq3xuh7vNwCp07UTmE5i11XAEExx4RA==}
@@ -1296,6 +1305,11 @@ snapshots:
       prettier: 2.8.8
 
   '@effect/language-service@0.87.2': {}
+
+  '@effect/vitest@4.0.0-rc.110(effect@4.0.0-rc.110)(vitest@4.1.10(vite@8.2.1))':
+    dependencies:
+      effect: 4.0.0-rc.110
+      vitest: 4.1.10(vite@8.2.1)
 
   '@inquirer/external-editor@1.0.3':
     dependencies:

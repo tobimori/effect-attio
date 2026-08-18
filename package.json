@@ -46,6 +46,7 @@
 	"devDependencies": {
 		"@changesets/cli": "^2.29.6",
 		"@effect/language-service": "^0.87.2",
+		"@effect/vitest": "4.0.0-rc.110",
 		"effect": "4.0.0-rc.110",
 		"oxfmt": "^0.63.0",
 		"oxlint": "^1.78.0",

@@ -19,6 +19,11 @@ import {
 } from "../error-transforms.js"
 import { AttioHttpClient } from "../http-client.js"
 import type { AttributeDef } from "../schemas/attribute-builder.js"
+import {
+	encodeAttributeHistory,
+	type AttributeHistoryInputValue,
+	type AttributeHistoryWrite,
+} from "../shared/attribute-values.js"
 import type {
 	NativeQueryParams,
 	QueryBuilderOptions,
@@ -32,16 +37,72 @@ const RecordId = Schema.Struct({
 	record_id: Uuid,
 })
 
+const MergeRecordsInput = Schema.Struct({
+	primary_record_id: Uuid,
+	secondary_record_id: Uuid,
+})
+
+const MergeRecordsResult = Schema.Struct({ new_record_id: Uuid })
+
+const SearchRequestAs = Schema.Union([
+	Schema.Struct({ type: Schema.Literal("workspace") }),
+	Schema.Struct({
+		type: Schema.Literal("workspace-member"),
+		workspace_member_id: Uuid,
+	}),
+	Schema.Struct({
+		type: Schema.Literal("workspace-member"),
+		email_address: Schema.String,
+	}),
+])
+
+export const RecordSearchInput = Schema.Struct({
+	query: Schema.String.check(Schema.isMaxLength(256)),
+	limit: Schema.optional(
+		Schema.Number.check(Schema.isBetween({ minimum: 1, maximum: 25 })),
+	),
+	objects: Schema.NonEmptyArray(Schema.String),
+	request_as: SearchRequestAs,
+})
+
+const SearchResultId = Schema.Struct({
+	workspace_id: Uuid,
+	object_id: Uuid,
+	record_id: Uuid,
+})
+const SearchResultBase = {
+	id: SearchResultId,
+	record_text: Schema.String,
+	record_image: Schema.NullOr(Schema.String),
+}
+export const RecordSearchResult = Schema.Union([
+	Schema.Struct({
+		...SearchResultBase,
+		object_slug: Schema.Literal("people"),
+		email_addresses: Schema.Array(Schema.String),
+		phone_numbers: Schema.Array(Schema.String),
+	}),
+	Schema.Struct({
+		...SearchResultBase,
+		object_slug: Schema.Literal("companies"),
+		domains: Schema.Array(Schema.String),
+	}),
+	Schema.Struct({ ...SearchResultBase, object_slug: Schema.String }),
+])
+
 type AttributeValueSchema<T extends AttributeDef> = T extends {
 	value: infer Value extends Schema.Top
 }
 	? Value
 	: typeof Schema.Unknown
 
+type RecordList<
+	TInput extends Schema.Top,
+	TOutput extends Schema.Constraint,
+> = ReturnType<typeof AttioRecords.Service.list<TInput, TOutput>>
+
 type FirstRecord<TInput extends Schema.Top, TOutput extends Schema.Constraint> =
-	ReturnType<
-		typeof AttioRecords.Service.list<TInput, TOutput>
-	> extends Effect.Effect<
+	RecordList<TInput, TOutput> extends Effect.Effect<
 		ReadonlyArray<infer Record>,
 		infer Error,
 		infer Requirements
@@ -53,9 +114,7 @@ type RecordStream<
 	TInput extends Schema.Top,
 	TOutput extends Schema.Constraint,
 > =
-	ReturnType<
-		typeof AttioRecords.Service.list<TInput, TOutput>
-	> extends Effect.Effect<
+	RecordList<TInput, TOutput> extends Effect.Effect<
 		ReadonlyArray<infer Record>,
 		infer Error,
 		infer Requirements
@@ -71,6 +130,24 @@ const makeAttioRecords = Effect.gen(function* () {
 	const http = yield* AttioHttpClient
 
 	return {
+		/** Searches records across one or more objects. */
+		search: Effect.fn("AttioRecords.search")(function* (
+			input: (typeof RecordSearchInput)["Type"],
+		) {
+			const body = yield* Schema.encodeEffect(RecordSearchInput)(input)
+			return yield* HttpClientRequest.post("/v2/objects/records/search").pipe(
+				HttpClientRequest.bodyJson(body),
+				Effect.flatMap(http.execute),
+				Effect.flatMap(
+					HttpClientResponse.schemaBodyJson(
+						DataStruct(Schema.Array(RecordSearchResult)),
+					),
+				),
+				Effect.map((result) => result.data),
+				mapAttioErrors(AttioValidationErrorTransform),
+			)
+		}),
+
 		/**
 		 * Lists people, company or other records, with the option to filter and sort results.
 		 *
@@ -84,7 +161,7 @@ const makeAttioRecords = Effect.gen(function* () {
 		>(
 			object: string,
 			schema: { input: TInput; output: TOutput },
-			params?: (typeof QueryParams)["Type"],
+			params?: QueryParams,
 		) {
 			const body = yield* Schema.encodeEffect(QueryParams)({
 				...params,
@@ -369,6 +446,28 @@ const makeAttioRecords = Effect.gen(function* () {
 				.pipe(mapAttioErrors(AttioNotFoundErrorTransform))
 		}),
 
+		/** Merges two records and returns the ID of the new merged record. */
+		merge: Effect.fn("AttioRecords.merge")(function* (
+			object: string,
+			input: (typeof MergeRecordsInput)["Type"],
+		) {
+			const data = yield* Schema.encodeEffect(MergeRecordsInput)(input)
+			return yield* HttpClientRequest.post(
+				`/v2/objects/${object}/records/merge`,
+			).pipe(
+				HttpClientRequest.bodyJson({ data }),
+				Effect.flatMap(http.execute),
+				Effect.flatMap(
+					HttpClientResponse.schemaBodyJson(DataStruct(MergeRecordsResult)),
+				),
+				Effect.map((result) => result.data),
+				mapAttioErrors(
+					AttioValidationErrorTransform,
+					AttioNotFoundErrorTransform,
+				),
+			)
+		}),
+
 		/**
 		 * # List record attribute values
 		 *
@@ -408,6 +507,36 @@ const makeAttioRecords = Effect.gen(function* () {
 						),
 					),
 					Effect.map((result) => result.data),
+				)
+			},
+		),
+
+		/** Replaces all historic values for one record attribute. */
+		writeAttributeValues: Effect.fn("AttioRecords.writeAttributeValues")(
+			function* <TValue extends Schema.Top = typeof Schema.Unknown>(
+				object: string,
+				recordId: string,
+				attribute: string,
+				data: AttributeHistoryWrite<unknown>,
+				valueSchema: TValue = Schema.Unknown as unknown as TValue,
+				queryValueType?: "date" | "timestamp",
+			) {
+				const body = yield* encodeAttributeHistory(data, queryValueType)
+				return yield* HttpClientRequest.put(
+					`/v2/objects/${object}/records/${recordId}/attributes/${attribute}/values`,
+				).pipe(
+					HttpClientRequest.bodyJson(body),
+					Effect.flatMap(http.execute),
+					Effect.flatMap(
+						HttpClientResponse.schemaBodyJson(
+							DataStruct(Schema.Array(valueSchema)),
+						),
+					),
+					Effect.map((result) => result.data),
+					mapAttioErrors(
+						AttioValidationErrorTransform,
+						AttioNotFoundErrorTransform,
+					),
 				)
 			},
 		),
@@ -467,6 +596,14 @@ export class AttioRecords extends Context.Service<
 	)
 }
 
+export type GenericAttioRecordSearch<TObjectName extends string> = {
+	search: (
+		input: Omit<Parameters<AttioRecords["Service"]["search"]>[0], "objects"> & {
+			readonly objects: readonly [TObjectName, ...ReadonlyArray<TObjectName>]
+		},
+	) => ReturnType<AttioRecords["Service"]["search"]>
+}
+
 // extract method signatures from service with inferred types
 export type GenericAttioRecords<
 	TInput extends Schema.Top,
@@ -483,7 +620,7 @@ export type GenericAttioRecords<
 > = {
 	findMany: (
 		options?: QueryBuilderOptions<TFields, TObjects>,
-	) => ReturnType<typeof AttioRecords.Service.list<TInput, TOutput>>
+	) => RecordList<TInput, TOutput>
 	findManyStream: (
 		options?: Omit<QueryBuilderOptions<TFields, TObjects>, "limit">,
 	) => RecordStream<TInput, TOutput>
@@ -493,7 +630,7 @@ export type GenericAttioRecords<
 
 	list: (
 		params?: NativeQueryParams<TFields, TObjects, TObjectName>,
-	) => ReturnType<typeof AttioRecords.Service.list<TInput, TOutput>>
+	) => RecordList<TInput, TOutput>
 	listStream: (
 		params?: WithoutLimit<NativeQueryParams<TFields, TObjects, TObjectName>>,
 	) => RecordStream<TInput, TOutput>
@@ -524,6 +661,9 @@ export type GenericAttioRecords<
 	delete: (
 		id: Parameters<typeof AttioRecords.Service.delete>[1],
 	) => ReturnType<typeof AttioRecords.Service.delete>
+	merge: (
+		input: Parameters<typeof AttioRecords.Service.merge>[1],
+	) => ReturnType<typeof AttioRecords.Service.merge>
 
 	listAttributeValues: <Attribute extends Extract<keyof TFields, string>>(
 		id: Parameters<typeof AttioRecords.Service.listAttributeValues>[1],
@@ -531,6 +671,15 @@ export type GenericAttioRecords<
 		params?: Parameters<typeof AttioRecords.Service.listAttributeValues>[3],
 	) => ReturnType<
 		typeof AttioRecords.Service.listAttributeValues<
+			AttributeValueSchema<TFields[Attribute]>
+		>
+	>
+	writeAttributeValues: <Attribute extends Extract<keyof TFields, string>>(
+		id: Parameters<typeof AttioRecords.Service.writeAttributeValues>[1],
+		attribute: Attribute,
+		data: AttributeHistoryWrite<AttributeHistoryInputValue<TFields[Attribute]>>,
+	) => ReturnType<
+		typeof AttioRecords.Service.writeAttributeValues<
 			AttributeValueSchema<TFields[Attribute]>
 		>
 	>

@@ -37,3 +37,5 @@ export const QueryParams = Schema.Union([
 		filter_view_id: Schema.optional(Uuid),
 	}),
 ])
+
+export type QueryParams = (typeof QueryParams)["Type"]

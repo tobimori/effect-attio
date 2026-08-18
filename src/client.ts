@@ -21,13 +21,29 @@ import { AttioHttpClient, type AttioHttpClientOptions } from "./http-client.js"
 import type { CreatedSchemas } from "./schemas/helpers.js"
 import type { AttributeDef } from "./schemas/attribute-builder.js"
 import { compileQueryBuilderOptions } from "./shared/query-builder.js"
+import type { QueryParams } from "./shared/query.js"
+import {
+	AttioAttributes,
+	type GenericAttioAttributes,
+} from "./services/attributes.js"
 import { AttioComments } from "./services/comments.js"
+import { AttioEmails, type GenericAttioEmails } from "./services/emails.js"
 import { AttioEntries, type GenericAttioEntries } from "./services/entries.js"
+import { AttioFiles, type GenericAttioFiles } from "./services/files.js"
 import { AttioLists, type GenericAttioLists } from "./services/lists.js"
+import {
+	AttioMeetings,
+	type GenericAttioMeetings,
+} from "./services/meetings.js"
 import { AttioMeta } from "./services/meta.js"
 import { AttioNotes, type GenericAttioNotes } from "./services/notes.js"
 import { AttioObjects } from "./services/objects.js"
-import { AttioRecords, type GenericAttioRecords } from "./services/records.js"
+import {
+	AttioRecords,
+	type GenericAttioRecords,
+	type GenericAttioRecordSearch,
+} from "./services/records.js"
+import { AttioSql } from "./services/sql.js"
 import { AttioTasks, type GenericAttioTasks } from "./services/tasks.js"
 import { AttioThreads, type GenericAttioThreads } from "./services/threads.js"
 import { AttioWebhooks } from "./services/webhooks.js"
@@ -36,6 +52,16 @@ import { AttioWorkspaceMembers } from "./services/workspace-members.js"
 type EmptyRecord = Record<never, never>
 
 const STREAM_PAGE_SIZE = 500
+
+const attributeDefinition = (fields: unknown, attribute: string) =>
+	(fields as Readonly<Record<string, AttributeDef>> | undefined)?.[attribute]
+
+type RuntimeQueryBuilderOptions = Parameters<
+	typeof compileQueryBuilderOptions
+>[0]
+type QueryBuilderContext = NonNullable<
+	Parameters<typeof compileQueryBuilderOptions>[1]
+>
 
 const paginateQuery = <A, E, R>(
 	initialOffset: number,
@@ -53,6 +79,29 @@ const paginateQuery = <A, E, R>(
 			] as const
 		}),
 	)
+
+const makeConfiguredQueryMethods = <A, E, R>(
+	context: QueryBuilderContext,
+	list: (params?: QueryParams) => Effect.Effect<ReadonlyArray<A>, E, R>,
+) => {
+	const compile = (options: RuntimeQueryBuilderOptions = {}) =>
+		compileQueryBuilderOptions(options, context)
+	const stream = (params: QueryParams = {}) =>
+		paginateQuery(params.offset ?? 0, (offset) =>
+			list({ ...params, limit: STREAM_PAGE_SIZE, offset }),
+		)
+
+	return {
+		findMany: (options: RuntimeQueryBuilderOptions = {}) =>
+			list(compile(options)),
+		findManyStream: (options: RuntimeQueryBuilderOptions = {}) =>
+			stream(compile(options)),
+		findFirst: (options: RuntimeQueryBuilderOptions = {}) =>
+			Effect.map(list({ ...compile(options), limit: 1 }), Arr.head),
+		list,
+		listStream: stream,
+	}
+}
 
 type ConfiguredObjects<T extends AttioClientSchemas> =
 	T["objects"] extends Record<string, ObjectConfig> ? T["objects"] : EmptyRecord
@@ -101,6 +150,15 @@ type AttioClientShape<T extends AttioClientSchemas> = {
 		>
 	} & GenericAttioLists<ConfiguredObjectName<T>>
 	comments: AttioComments["Service"]
+	attributes: GenericAttioAttributes<
+		ConfiguredObjectName<T>,
+		Extract<keyof ConfiguredLists<T>, string>
+	>
+	emails: GenericAttioEmails<ConfiguredObjectName<T>>
+	files: GenericAttioFiles<ConfiguredObjectName<T>>
+	meetings: GenericAttioMeetings<ConfiguredObjectName<T>>
+	records: GenericAttioRecordSearch<ConfiguredObjectName<T>>
+	sql: AttioSql["Service"]
 	threads: GenericAttioThreads<ConfiguredObjectName<T>>
 	tasks: GenericAttioTasks<ConfiguredObjectName<T>>
 	notes: GenericAttioNotes<ConfiguredObjectName<T>>
@@ -148,11 +206,16 @@ export const AttioClient =
 					tag,
 					Effect.gen(function* () {
 						const comments = yield* AttioComments
+						const attributes = yield* AttioAttributes
+						const emails = yield* AttioEmails
+						const files = yield* AttioFiles
+						const meetings = yield* AttioMeetings
 						const threads = yield* AttioThreads
 						const tasks = yield* AttioTasks
 						const notes = yield* AttioNotes
 						const objects = yield* AttioObjects
 						const records = yield* AttioRecords
+						const sql = yield* AttioSql
 						const entries = yield* AttioEntries
 						const lists = yield* AttioLists
 						const meta = yield* AttioMeta
@@ -164,11 +227,17 @@ export const AttioClient =
 						return tag.of(
 							new Proxy(
 								{
+									attributes,
 									comments,
+									emails,
+									files,
+									meetings,
 									threads,
 									tasks,
 									notes,
 									objects,
+									records: { search: records.search },
+									sql,
 									lists: new Proxy(lists as any, {
 										get(target, listName: string) {
 											// check if it's a lists service method
@@ -189,58 +258,9 @@ export const AttioClient =
 											}
 
 											return {
-												findMany: (options: any = {}) =>
-													entries.list(
-														listName,
-														{ input, output },
-														compileQueryBuilderOptions(options, queryContext),
-													),
-												findManyStream: (options: any = {}) => {
-													const query = compileQueryBuilderOptions(
-														options,
-														queryContext,
-													)
-													return paginateQuery(query.offset ?? 0, (offset) =>
-														entries.list(
-															listName,
-															{ input, output },
-															{
-																...query,
-																limit: STREAM_PAGE_SIZE,
-																offset,
-															},
-														),
-													)
-												},
-												findFirst: (options: any = {}) =>
-													Effect.map(
-														entries.list(
-															listName,
-															{ input, output },
-															{
-																...compileQueryBuilderOptions(
-																	options,
-																	queryContext,
-																),
-																limit: 1,
-															},
-														),
-														(entries) => Arr.head(entries),
-													),
-												list: (params?: any) =>
+												...makeConfiguredQueryMethods(queryContext, (params) =>
 													entries.list(listName, { input, output }, params),
-												listStream: (params: any = {}) =>
-													paginateQuery(params.offset ?? 0, (offset) =>
-														entries.list(
-															listName,
-															{ input, output },
-															{
-																...params,
-																limit: STREAM_PAGE_SIZE,
-																offset,
-															},
-														),
-													),
+												),
 												assert: (data: any) =>
 													entries.assert(listName, { input, output }, data),
 												create: (data: any) =>
@@ -277,12 +297,27 @@ export const AttioClient =
 														entryId,
 														attribute,
 														params,
-														(
-															listSchema?.fields as
-																| Record<string, AttributeDef>
-																| undefined
-														)?.[attribute]?.value ?? Schema.Unknown,
+														attributeDefinition(listSchema?.fields, attribute)
+															?.value ?? Schema.Unknown,
 													),
+												writeAttributeValues: (
+													entryId: string,
+													attribute: string,
+													data: any,
+												) => {
+													const definition = attributeDefinition(
+														listSchema?.fields,
+														attribute,
+													)
+													return entries.writeAttributeValues(
+														listName,
+														entryId,
+														attribute,
+														data,
+														definition?.value ?? Schema.Unknown,
+														definition?.queryValueType,
+													)
+												},
 											}
 										},
 									}),
@@ -308,58 +343,9 @@ export const AttioClient =
 										}
 
 										return {
-											findMany: (options: any = {}) =>
-												records.list(
-													resource,
-													{ input, output },
-													compileQueryBuilderOptions(options, queryContext),
-												),
-											findManyStream: (options: any = {}) => {
-												const query = compileQueryBuilderOptions(
-													options,
-													queryContext,
-												)
-												return paginateQuery(query.offset ?? 0, (offset) =>
-													records.list(
-														resource,
-														{ input, output },
-														{
-															...query,
-															limit: STREAM_PAGE_SIZE,
-															offset,
-														},
-													),
-												)
-											},
-											findFirst: (options: any = {}) =>
-												Effect.map(
-													records.list(
-														resource,
-														{ input, output },
-														{
-															...compileQueryBuilderOptions(
-																options,
-																queryContext,
-															),
-															limit: 1,
-														},
-													),
-													(records) => Arr.head(records),
-												),
-											list: (params?: any) =>
+											...makeConfiguredQueryMethods(queryContext, (params) =>
 												records.list(resource, { input, output }, params),
-											listStream: (params: any = {}) =>
-												paginateQuery(params.offset ?? 0, (offset) =>
-													records.list(
-														resource,
-														{ input, output },
-														{
-															...params,
-															limit: STREAM_PAGE_SIZE,
-															offset,
-														},
-													),
-												),
+											),
 
 											assert: (matchingAttribute: string, data: any) =>
 												records.assert(
@@ -382,6 +368,7 @@ export const AttioClient =
 												records.patch(resource, { input, output }, id, data),
 
 											delete: (id: string) => records.delete(resource, id),
+											merge: (input: any) => records.merge(resource, input),
 
 											listAttributeValues: (
 												id: string,
@@ -397,12 +384,28 @@ export const AttioClient =
 													id,
 													attribute,
 													params,
-													(
-														schema?.fields as
-															| Record<string, AttributeDef>
-															| undefined
-													)?.[attribute]?.value ?? Schema.Unknown,
+													attributeDefinition(schema?.fields, attribute)
+														?.value ?? Schema.Unknown,
 												),
+
+											writeAttributeValues: (
+												id: string,
+												attribute: string,
+												data: any,
+											) => {
+												const definition = attributeDefinition(
+													schema?.fields,
+													attribute,
+												)
+												return records.writeAttributeValues(
+													resource,
+													id,
+													attribute,
+													data,
+													definition?.value ?? Schema.Unknown,
+													definition?.queryValueType,
+												)
+											},
 
 											listEntries: (
 												id: string,
@@ -421,11 +424,16 @@ export const AttioClient =
 					Layer.provide(
 						Layer.mergeAll(
 							AttioComments.layer,
+							AttioAttributes.layer,
+							AttioEmails.layer,
+							AttioFiles.layer,
+							AttioMeetings.layer,
 							AttioThreads.layer,
 							AttioTasks.layer,
 							AttioNotes.layer,
 							AttioObjects.layer,
 							AttioRecords.layer,
+							AttioSql.layer,
 							AttioEntries.layer,
 							AttioLists.layer,
 							AttioMeta.layer,

@@ -13,10 +13,16 @@ import {
 	AttioMultipleMatchErrorTransform,
 	AttioNotFoundErrorTransform,
 	AttioUniquenessConflictErrorTransform,
+	AttioValidationErrorTransform,
 	mapAttioErrors,
 } from "../error-transforms.js"
 import { AttioHttpClient } from "../http-client.js"
 import type { AttributeDef } from "../schemas/attribute-builder.js"
+import {
+	encodeAttributeHistory,
+	type AttributeHistoryInputValue,
+	type AttributeHistoryWrite,
+} from "../shared/attribute-values.js"
 import type {
 	NativeQueryParams,
 	QueryBuilderOptions,
@@ -36,10 +42,13 @@ type AttributeValueSchema<T extends AttributeDef> = T extends {
 	? Value
 	: typeof Schema.Unknown
 
+type EntryList<
+	TInput extends Schema.Top,
+	TOutput extends Schema.Constraint,
+> = ReturnType<typeof AttioEntries.Service.list<TInput, TOutput>>
+
 type FirstEntry<TInput extends Schema.Top, TOutput extends Schema.Constraint> =
-	ReturnType<
-		typeof AttioEntries.Service.list<TInput, TOutput>
-	> extends Effect.Effect<
+	EntryList<TInput, TOutput> extends Effect.Effect<
 		ReadonlyArray<infer Entry>,
 		infer Error,
 		infer Requirements
@@ -48,9 +57,7 @@ type FirstEntry<TInput extends Schema.Top, TOutput extends Schema.Constraint> =
 		: never
 
 type EntryStream<TInput extends Schema.Top, TOutput extends Schema.Constraint> =
-	ReturnType<
-		typeof AttioEntries.Service.list<TInput, TOutput>
-	> extends Effect.Effect<
+	EntryList<TInput, TOutput> extends Effect.Effect<
 		ReadonlyArray<infer Entry>,
 		infer Error,
 		infer Requirements
@@ -61,6 +68,28 @@ type EntryStream<TInput extends Schema.Top, TOutput extends Schema.Constraint> =
 type WithoutLimit<Options> = Options extends unknown
 	? Omit<Options, "limit">
 	: never
+
+type EntryQueryOptions<
+	Fields extends Record<string, AttributeDef>,
+	Objects extends Record<string, Record<string, AttributeDef>>,
+	ObjectName extends string,
+> = QueryBuilderOptions<
+	Fields,
+	Objects,
+	Extract<ObjectName, keyof Objects & string>
+>
+
+type EntryNativeQueryParams<
+	Fields extends Record<string, AttributeDef>,
+	Objects extends Record<string, Record<string, AttributeDef>>,
+	ObjectName extends string,
+	ListName extends string,
+> = NativeQueryParams<
+	Fields,
+	Objects,
+	ListName,
+	Extract<ObjectName, keyof Objects & string>
+>
 
 const makeAttioEntries = Effect.gen(function* () {
 	const http = yield* AttioHttpClient
@@ -81,7 +110,7 @@ const makeAttioEntries = Effect.gen(function* () {
 		>(
 			list: string,
 			schema: { input: TInput; output: TOutput },
-			params?: (typeof QueryParams)["Type"],
+			params?: QueryParams,
 		) {
 			const body = yield* Schema.encodeEffect(QueryParams)({
 				...params,
@@ -422,6 +451,36 @@ const makeAttioEntries = Effect.gen(function* () {
 				)
 			},
 		),
+
+		/** Replaces all historic values for one list-entry attribute. */
+		writeAttributeValues: Effect.fn("AttioEntries.writeAttributeValues")(
+			function* <TValue extends Schema.Top = typeof Schema.Unknown>(
+				list: string,
+				entryId: string,
+				attribute: string,
+				data: AttributeHistoryWrite<unknown>,
+				valueSchema: TValue = Schema.Unknown as unknown as TValue,
+				queryValueType?: "date" | "timestamp",
+			) {
+				const body = yield* encodeAttributeHistory(data, queryValueType)
+				return yield* HttpClientRequest.put(
+					`/v2/lists/${list}/entries/${entryId}/attributes/${attribute}/values`,
+				).pipe(
+					HttpClientRequest.bodyJson(body),
+					Effect.flatMap(http.execute),
+					Effect.flatMap(
+						HttpClientResponse.schemaBodyJson(
+							DataStruct(Schema.Array(valueSchema)),
+						),
+					),
+					Effect.map((result) => result.data),
+					mapAttioErrors(
+						AttioValidationErrorTransform,
+						AttioNotFoundErrorTransform,
+					),
+				)
+			},
+		),
 	}
 })
 
@@ -448,49 +507,21 @@ export type GenericAttioEntries<
 	TListName extends string = string,
 > = {
 	findMany: (
-		options?: QueryBuilderOptions<
-			TFields,
-			TObjects,
-			Extract<TObjectName, keyof TObjects & string>
-		>,
-	) => ReturnType<typeof AttioEntries.Service.list<TInput, TOutput>>
+		options?: EntryQueryOptions<TFields, TObjects, TObjectName>,
+	) => EntryList<TInput, TOutput>
 	findManyStream: (
-		options?: Omit<
-			QueryBuilderOptions<
-				TFields,
-				TObjects,
-				Extract<TObjectName, keyof TObjects & string>
-			>,
-			"limit"
-		>,
+		options?: Omit<EntryQueryOptions<TFields, TObjects, TObjectName>, "limit">,
 	) => EntryStream<TInput, TOutput>
 	findFirst: (
-		options?: Omit<
-			QueryBuilderOptions<
-				TFields,
-				TObjects,
-				Extract<TObjectName, keyof TObjects & string>
-			>,
-			"limit"
-		>,
+		options?: Omit<EntryQueryOptions<TFields, TObjects, TObjectName>, "limit">,
 	) => FirstEntry<TInput, TOutput>
 
 	list: (
-		params?: NativeQueryParams<
-			TFields,
-			TObjects,
-			TListName,
-			Extract<TObjectName, keyof TObjects & string>
-		>,
-	) => ReturnType<typeof AttioEntries.Service.list<TInput, TOutput>>
+		params?: EntryNativeQueryParams<TFields, TObjects, TObjectName, TListName>,
+	) => EntryList<TInput, TOutput>
 	listStream: (
 		params?: WithoutLimit<
-			NativeQueryParams<
-				TFields,
-				TObjects,
-				TListName,
-				Extract<TObjectName, keyof TObjects & string>
-			>
+			EntryNativeQueryParams<TFields, TObjects, TObjectName, TListName>
 		>,
 	) => EntryStream<TInput, TOutput>
 	assert: (
@@ -525,6 +556,15 @@ export type GenericAttioEntries<
 		params?: Parameters<typeof AttioEntries.Service.listAttributeValues>[3],
 	) => ReturnType<
 		typeof AttioEntries.Service.listAttributeValues<
+			AttributeValueSchema<TFields[Attribute]>
+		>
+	>
+	writeAttributeValues: <Attribute extends Extract<keyof TFields, string>>(
+		entryId: Parameters<typeof AttioEntries.Service.writeAttributeValues>[1],
+		attribute: Attribute,
+		data: AttributeHistoryWrite<AttributeHistoryInputValue<TFields[Attribute]>>,
+	) => ReturnType<
+		typeof AttioEntries.Service.writeAttributeValues<
 			AttributeValueSchema<TFields[Attribute]>
 		>
 	>

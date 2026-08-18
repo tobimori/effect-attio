@@ -2,6 +2,7 @@ import { Effect, Redacted, Stream } from "effect"
 import type { Config, Layer } from "effect"
 import type * as DateTime from "effect/DateTime"
 import type * as Option from "effect/Option"
+import type * as Schema from "effect/Schema"
 import type { HttpClient } from "effect/unstable/http"
 import { AttioClient, Attributes } from "effect-attio"
 import { describe, expect, it } from "tstyche"
@@ -34,6 +35,7 @@ class TestAttioClient extends AttioClient<TestAttioClient>()(
 
 declare const client: TestAttioClient["Service"]
 declare const dateTime: DateTime.DateTime
+declare const utc: DateTime.Utc
 
 describe("AttioClient", () => {
 	it("requires snake-case configured attribute slugs", () => {
@@ -673,6 +675,150 @@ describe("AttioClient", () => {
 			"550e8400-e29b-41d4-a716-446655440000",
 			"unknownField",
 		)
+	})
+
+	it("types the complete endpoint services", () => {
+		const recordId = "550e8400-e29b-41d4-a716-446655440000"
+
+		expect(client.attributes.list).type.toBeCallableWith("objects", "invoices")
+		expect(client.attributes.list).type.not.toBeCallableWith(
+			"records",
+			"invoices",
+		)
+		expect(client.attributes.create).type.toBeCallableWith(
+			"objects",
+			"invoices",
+			{
+				title: "Amount",
+				description: null,
+				api_slug: "amount",
+				type: "currency",
+				is_required: false,
+				is_unique: false,
+				is_multiselect: false,
+				config: {
+					currency: {
+						default_currency_code: "BGN",
+						display_type: "symbol",
+					},
+				},
+			},
+		)
+		expect(client.records.search).type.toBeCallableWith({
+			query: "Acme",
+			objects: ["companies", "invoices"],
+			request_as: { type: "workspace" },
+		})
+		expect(client.records.search).type.not.toBeCallableWith({
+			query: "Acme",
+			objects: ["unknown_object"],
+			request_as: { type: "workspace" },
+		})
+
+		expect(client.invoices.writeAttributeValues).type.toBeCallableWith(
+			recordId,
+			"invoice_date",
+			{
+				values: [
+					{
+						value: utc,
+						active_from: dateTime,
+						active_until: null,
+					},
+				],
+				replace_history: true,
+			},
+		)
+		expect(client.invoices.writeAttributeValues).type.not.toBeCallableWith(
+			recordId,
+			"amount",
+			{
+				values: [
+					{
+						value: true,
+						active_from: dateTime,
+						active_until: null,
+					},
+				],
+				replace_history: true,
+			},
+		)
+		expect(client.invoices.writeAttributeValues).type.not.toBeCallableWith(
+			recordId,
+			"unknown_field",
+			{
+				values: [],
+				replace_history: true,
+			},
+		)
+
+		expect(client.emails.list).type.toBeCallableWith({
+			linked_object: "invoices",
+			linked_record_ids: recordId,
+		})
+		expect(client.emails.list).type.not.toBeCallableWith({
+			linked_object: "invoices",
+		})
+		expect(client.emails.list).type.not.toBeCallableWith({
+			linked_object: "unknown_object",
+			linked_record_ids: recordId,
+		})
+		expect(client.meetings.list).type.toBeCallableWith({
+			linked_object: "invoices",
+			linked_record_id: recordId,
+		})
+		expect(client.meetings.list).type.not.toBeCallableWith({
+			linked_object: "invoices",
+		})
+		expect(client.meetings.list).type.not.toBeCallableWith({
+			linked_object: "unknown_object",
+			linked_record_id: recordId,
+		})
+		expect(client.meetings.create).type.toBeCallableWith({
+			title: "Review",
+			description: "Invoice review",
+			start: { datetime: utc, timezone: "UTC" },
+			end: { datetime: utc, timezone: "UTC" },
+			is_all_day: false,
+			participants: [{ is_organizer: true, status: "accepted", name: "Attio" }],
+		})
+		expect(client.meetings.create).type.not.toBeCallableWith({
+			title: "Review",
+			description: "Invoice review",
+			start: { datetime: utc, timezone: "UTC" },
+			end: { datetime: utc, timezone: "UTC" },
+			is_all_day: true,
+			participants: [],
+		})
+		expect(client.meetings.create).type.not.toBeCallableWith({
+			title: "Review",
+			description: "Invoice review",
+			start: { datetime: utc, timezone: "UTC" },
+			end: { datetime: utc, timezone: "UTC" },
+			is_all_day: false,
+			participants: [{ is_organizer: true, status: "accepted" }],
+		})
+		expect(client.files.list).type.not.toBeCallableWith({
+			object: "unknown_object",
+			record_id: recordId,
+		})
+		expect(client.files.upload).type.toBeCallableWith({
+			file: new Blob(),
+			object: "invoices",
+			record_id: recordId,
+		})
+		expect(client.files.create).type.toBeCallableWith({
+			object: "invoices",
+			record_id: recordId,
+			storage_provider: "dropbox",
+			external_provider_file_id: "external-file",
+			file_type: "connected-file",
+		})
+
+		const rows = client.sql.query("SELECT * FROM companies")
+		expect<Effect.Success<typeof rows>>().type.toBe<
+			ReadonlyArray<Readonly<Record<string, Schema.Json>>>
+		>()
 	})
 
 	it("is available as an Effect service", () => {

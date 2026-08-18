@@ -19,3 +19,5 @@ Limit relationship paths to Attio's five-segment maximum and restrict `$not` to 
 Match structured-field capabilities observed in the live API, including location country codes and email local specifiers.
 
 Add missing standard Company and Person attributes and optional read-only attribute variants.
+
+Implement every active endpoint in Attio's public REST OpenAPI specification, including attribute configuration, record search and merge, historic attribute writes, SQL, emails, meetings, call recordings, and files. The deprecated standalone call-transcript endpoint is excluded.

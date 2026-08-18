@@ -16,6 +16,15 @@ type ComparisonOperator =
 	| "gt"
 	| "gte"
 
+type NativeOperatorName<Operator extends ComparisonOperator> =
+	Operator extends "notEmpty"
+		? "$not_empty"
+		: Operator extends "startsWith"
+			? "$starts_with"
+			: Operator extends "endsWith"
+				? "$ends_with"
+				: `$${Operator}`
+
 type StringOperator = "eq" | "contains" | "startsWith" | "endsWith"
 
 type StringOperatorWithNotEmpty = StringOperator | "notEmpty"
@@ -58,7 +67,7 @@ interface QueryOrder {
 	}
 }
 
-type AnyColumn = QueryColumn<any, any>
+type AnyColumn = QueryColumn<unknown, ComparisonOperator>
 type ColumnValue<Column extends AnyColumn> = Column[typeof ColumnType]["value"]
 type ColumnNativeValue<Column extends AnyColumn> = Exclude<
 	ColumnValue<Column>,
@@ -232,46 +241,42 @@ type StatusQueryAttribute<Attribute extends AttributeDef> = QueryColumn<
 	readonly active_from: DateRangeColumn
 }
 
+type QueryAttributeByKind<
+	Attribute extends AttributeDef,
+	Objects extends ObjectQueryFields,
+	Depth extends QueryDepth,
+> = {
+	readonly text: TextQueryAttribute
+	readonly number: NumberQueryAttribute
+	readonly rating: NumberQueryAttribute
+	readonly currency: CurrencyQueryAttribute
+	readonly date: DateQueryAttribute
+	readonly timestamp: DateQueryAttribute
+	readonly checkbox: CheckboxQueryAttribute
+	readonly domain: DomainQueryAttribute
+	readonly "email-address": EmailAddressQueryAttribute
+	readonly "personal-name": PersonalNameQueryAttribute
+	readonly location: LocationQueryAttribute
+	readonly "phone-number": PhoneNumberQueryAttribute
+	readonly interaction: InteractionQueryAttribute
+	readonly "actor-reference": ActorReferenceQueryAttribute
+	readonly "record-reference": RecordReferenceQueryAttribute<
+		Attribute,
+		Objects,
+		Depth
+	>
+	readonly select: SelectQueryAttribute<Attribute>
+	readonly status: StatusQueryAttribute<Attribute>
+}
+
 type QueryAttribute<
 	Attribute extends AttributeDef,
 	Objects extends ObjectQueryFields = {},
 	Depth extends QueryDepth = readonly [],
-> =
-	AttributeKind<Attribute> extends "text"
-		? TextQueryAttribute
-		: AttributeKind<Attribute> extends "number" | "rating"
-			? NumberQueryAttribute
-			: AttributeKind<Attribute> extends "currency"
-				? CurrencyQueryAttribute
-				: AttributeKind<Attribute> extends "date" | "timestamp"
-					? DateQueryAttribute
-					: AttributeKind<Attribute> extends "checkbox"
-						? CheckboxQueryAttribute
-						: AttributeKind<Attribute> extends "domain"
-							? DomainQueryAttribute
-							: AttributeKind<Attribute> extends "email-address"
-								? EmailAddressQueryAttribute
-								: AttributeKind<Attribute> extends "personal-name"
-									? PersonalNameQueryAttribute
-									: AttributeKind<Attribute> extends "location"
-										? LocationQueryAttribute
-										: AttributeKind<Attribute> extends "phone-number"
-											? PhoneNumberQueryAttribute
-											: AttributeKind<Attribute> extends "interaction"
-												? InteractionQueryAttribute
-												: AttributeKind<Attribute> extends "actor-reference"
-													? ActorReferenceQueryAttribute
-													: AttributeKind<Attribute> extends "record-reference"
-														? RecordReferenceQueryAttribute<
-																Attribute,
-																Objects,
-																Depth
-															>
-														: AttributeKind<Attribute> extends "select"
-															? SelectQueryAttribute<Attribute>
-															: AttributeKind<Attribute> extends "status"
-																? StatusQueryAttribute<Attribute>
-																: never
+> = QueryAttributeByKind<Attribute, Objects, Depth>[Extract<
+	AttributeKind<Attribute>,
+	keyof QueryAttributeByKind<Attribute, Objects, Depth>
+>]
 
 type QueryFields<
 	Fields extends Record<string, AttributeDef>,
@@ -385,15 +390,6 @@ type NativePathDescriptors<
 > =
 	| NativeRecordPathDescriptors<Fields, Objects, Resource>
 	| NativeParentPathDescriptors<Objects, Resource, ParentObject>
-
-type NativeOperatorName<Operator extends ComparisonOperator> =
-	Operator extends "notEmpty"
-		? "$not_empty"
-		: Operator extends "startsWith"
-			? "$starts_with"
-			: Operator extends "endsWith"
-				? "$ends_with"
-				: `$${Operator}`
 
 type NativeOperatorValue<
 	Column extends AnyColumn,
@@ -613,17 +609,7 @@ export interface QueryBuilderOptions<
 type ComparisonNode = {
 	readonly _tag: "Comparison"
 	readonly column: ColumnDescriptor
-	readonly operator: `$${
-		| "eq"
-		| "in"
-		| "not_empty"
-		| "contains"
-		| "starts_with"
-		| "ends_with"
-		| "lt"
-		| "lte"
-		| "gt"
-		| "gte"}`
+	readonly operator: NativeOperatorName<ComparisonOperator>
 	readonly value: unknown
 }
 
@@ -737,11 +723,34 @@ const comparison = <Column extends AnyColumn>(
 	}
 }
 
-const queryOperators = {
-	eq: <Column extends AnyColumn>(
-		column: Supports<Column, "eq">,
+const binaryOperator =
+	<Operator extends ComparisonOperator>(
+		operator: NativeOperatorName<Operator>,
+	) =>
+	<Column extends AnyColumn>(
+		column: Supports<Column, Operator>,
 		value: ColumnValue<Column>,
-	): QueryComparisonExpression => comparison(column, "$eq", value),
+	): QueryComparisonExpression =>
+		comparison(column, operator, value)
+
+const logicalOperator =
+	(operator: "$and" | "$or") =>
+	(...expressions: ReadonlyArray<QueryExpression>): QueryExpression => ({
+		[ExpressionType]: {
+			_tag: "Logical",
+			operator,
+			expressions: expressions.map((expression) => expression[ExpressionType]),
+		},
+	})
+
+const orderOperator =
+	(direction: "asc" | "desc") =>
+	(column: AnyColumn): QueryOrder => ({
+		[OrderType]: { column: column[ColumnType].descriptor, direction },
+	})
+
+const queryOperators = {
+	eq: binaryOperator<"eq">("$eq"),
 	inArray: <Column extends AnyColumn>(
 		column: Supports<Column, "in">,
 		values: ReadonlyArray<ColumnValue<Column>>,
@@ -749,60 +758,41 @@ const queryOperators = {
 	isNotEmpty: <Column extends AnyColumn>(
 		column: Supports<Column, "notEmpty">,
 	): QueryComparisonExpression => comparison(column, "$not_empty", true),
-	contains: <Column extends AnyColumn>(
-		column: Supports<Column, "contains">,
-		value: ColumnValue<Column>,
-	): QueryComparisonExpression => comparison(column, "$contains", value),
-	startsWith: <Column extends AnyColumn>(
-		column: Supports<Column, "startsWith">,
-		value: ColumnValue<Column>,
-	): QueryComparisonExpression => comparison(column, "$starts_with", value),
-	endsWith: <Column extends AnyColumn>(
-		column: Supports<Column, "endsWith">,
-		value: ColumnValue<Column>,
-	): QueryComparisonExpression => comparison(column, "$ends_with", value),
-	lt: <Column extends AnyColumn>(
-		column: Supports<Column, "lt">,
-		value: ColumnValue<Column>,
-	): QueryComparisonExpression => comparison(column, "$lt", value),
-	lte: <Column extends AnyColumn>(
-		column: Supports<Column, "lte">,
-		value: ColumnValue<Column>,
-	): QueryComparisonExpression => comparison(column, "$lte", value),
-	gt: <Column extends AnyColumn>(
-		column: Supports<Column, "gt">,
-		value: ColumnValue<Column>,
-	): QueryComparisonExpression => comparison(column, "$gt", value),
-	gte: <Column extends AnyColumn>(
-		column: Supports<Column, "gte">,
-		value: ColumnValue<Column>,
-	): QueryComparisonExpression => comparison(column, "$gte", value),
-	and: (...expressions: ReadonlyArray<QueryExpression>): QueryExpression => ({
-		[ExpressionType]: {
-			_tag: "Logical",
-			operator: "$and",
-			expressions: expressions.map((expression) => expression[ExpressionType]),
-		},
-	}),
-	or: (...expressions: ReadonlyArray<QueryExpression>): QueryExpression => ({
-		[ExpressionType]: {
-			_tag: "Logical",
-			operator: "$or",
-			expressions: expressions.map((expression) => expression[ExpressionType]),
-		},
-	}),
+	contains: binaryOperator<"contains">("$contains"),
+	startsWith: binaryOperator<"startsWith">("$starts_with"),
+	endsWith: binaryOperator<"endsWith">("$ends_with"),
+	lt: binaryOperator<"lt">("$lt"),
+	lte: binaryOperator<"lte">("$lte"),
+	gt: binaryOperator<"gt">("$gt"),
+	gte: binaryOperator<"gte">("$gte"),
+	and: logicalOperator("$and"),
+	or: logicalOperator("$or"),
 	not: (expression: QueryComparisonExpression): QueryExpression => ({
 		[ExpressionType]: {
 			_tag: "Not",
 			expression: expression[ExpressionType],
 		},
 	}),
-	asc: (column: AnyColumn): QueryOrder => ({
-		[OrderType]: { column: column[ColumnType].descriptor, direction: "asc" },
-	}),
-	desc: (column: AnyColumn): QueryOrder => ({
-		[OrderType]: { column: column[ColumnType].descriptor, direction: "desc" },
-	}),
+	asc: orderOperator("asc"),
+	desc: orderOperator("desc"),
+}
+
+const invokeQueryCallback = <Result>(
+	callback: unknown,
+	queryFields: unknown,
+	parentFields?: unknown,
+): Result | undefined => {
+	if (typeof callback !== "function") return undefined
+
+	const invoke = callback as (
+		fields: unknown,
+		parentOrOperators: unknown,
+		operators?: typeof queryOperators,
+	) => Result
+
+	return parentFields === undefined
+		? invoke(queryFields, queryOperators)
+		: invoke(queryFields, parentFields, queryOperators)
 }
 
 const compileExpression = (node: ExpressionNode): Record<string, Json> => {
@@ -843,52 +833,26 @@ export const compileQueryBuilderOptions = <
 	context: QueryRuntimeContext = {},
 ) => {
 	const queryFields = fields<Fields, Objects>(context)
-	let where: QueryExpression | undefined
-	let orderBy: QueryOrder | ReadonlyArray<QueryOrder> | undefined
-
-	if (context.parentResource) {
-		const parentFields = fields<Record<string, AttributeDef>, Objects>({
-			resource: context.parentResource,
-			fields: context.objects?.[context.parentResource]?.fields,
-			objects: context.objects,
-			pathPrefix: context.resource
-				? [[context.resource, "parent_record"]]
-				: undefined,
-		})
-		const whereCallback = options.where as unknown as
-			| ((
-					fields: QueryFields<Fields, Objects>,
-					parent: QueryFields<Record<string, AttributeDef>, Objects>,
-					operators: typeof queryOperators,
-			  ) => QueryExpression)
-			| undefined
-		const orderByCallback = options.orderBy as unknown as
-			| ((
-					fields: QueryFields<Fields, Objects>,
-					parent: QueryFields<Record<string, AttributeDef>, Objects>,
-					operators: typeof queryOperators,
-			  ) => QueryOrder | ReadonlyArray<QueryOrder>)
-			| undefined
-
-		where = whereCallback?.(queryFields, parentFields, queryOperators)
-		orderBy = orderByCallback?.(queryFields, parentFields, queryOperators)
-	} else {
-		const whereCallback = options.where as unknown as
-			| ((
-					fields: QueryFields<Fields, Objects>,
-					operators: typeof queryOperators,
-			  ) => QueryExpression)
-			| undefined
-		const orderByCallback = options.orderBy as unknown as
-			| ((
-					fields: QueryFields<Fields, Objects>,
-					operators: typeof queryOperators,
-			  ) => QueryOrder | ReadonlyArray<QueryOrder>)
-			| undefined
-
-		where = whereCallback?.(queryFields, queryOperators)
-		orderBy = orderByCallback?.(queryFields, queryOperators)
-	}
+	const parentFields = context.parentResource
+		? fields<Record<string, AttributeDef>, Objects>({
+				resource: context.parentResource,
+				fields: context.objects?.[context.parentResource]?.fields,
+				objects: context.objects,
+				pathPrefix: context.resource
+					? [[context.resource, "parent_record"]]
+					: undefined,
+			})
+		: undefined
+	const where = invokeQueryCallback<QueryExpression>(
+		options.where,
+		queryFields,
+		parentFields,
+	)
+	const orderBy = invokeQueryCallback<QueryOrder | ReadonlyArray<QueryOrder>>(
+		options.orderBy,
+		queryFields,
+		parentFields,
+	)
 	const orders: ReadonlyArray<QueryOrder> | undefined =
 		orderBy === undefined
 			? undefined

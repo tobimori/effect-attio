@@ -54,6 +54,12 @@ export const LinkedRecordOutput = Schema.Struct({
 	target_record_id: Uuid,
 })
 
+export const LinkedRecordReference = Schema.Struct({
+	object_slug: Schema.String,
+	object_id: Uuid,
+	record_id: Uuid,
+})
+
 // tags for notes and comments
 export const WorkspaceMemberTag = Schema.Struct({
 	type: Schema.Literal("workspace-member"),

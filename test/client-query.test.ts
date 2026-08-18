@@ -1,5 +1,5 @@
 import { describe, expect, it } from "@effect/vitest"
-import { Effect, Layer, Option, Redacted, Stream } from "effect"
+import { DateTime, Effect, Layer, Option, Redacted, Stream } from "effect"
 import {
 	HttpClient,
 	HttpClientRequest,
@@ -19,6 +19,7 @@ class TestAttioClient extends AttioClient<TestAttioClient>()(
 		objects: {
 			invoices: {
 				amount: Attributes.Currency,
+				invoice_date: Attributes.Date,
 				invoice_number: Attributes.Text,
 			},
 		},
@@ -47,6 +48,7 @@ const recordResponse = {
 			web_url: `https://app.attio.com/invoices/${recordId}`,
 			values: {
 				amount: [],
+				invoice_date: [],
 				invoice_number: [],
 				record_id: [
 					{
@@ -369,6 +371,405 @@ describe("configured client queries", () => {
 					limit: 500,
 					offset: 2,
 				})
+			}),
+			http.layer,
+		)
+	})
+})
+
+describe("complete endpoint coverage", () => {
+	it.effect("sends requests to every newly supported active endpoint", () => {
+		const http = makeHttpHarness(Array.from({ length: 29 }, () => ({})))
+		const id = recordId
+		const dateTime = DateTime.makeUnsafe(timestamp)
+
+		return provideClient(
+			Effect.gen(function* () {
+				const attio = yield* TestAttioClient
+				const attempt = <A, E>(effect: Effect.Effect<A, E>) =>
+					Effect.asVoid(Effect.exit(effect))
+
+				yield* attempt(
+					attio.attributes.list("objects", "invoices", {
+						show_archived: true,
+					}),
+				)
+				yield* attempt(
+					attio.attributes.create("objects", "invoices", {
+						title: "Reference",
+						description: null,
+						api_slug: "reference",
+						type: "text",
+						is_required: false,
+						is_unique: false,
+						is_multiselect: false,
+						config: {},
+					}),
+				)
+				yield* attempt(attio.attributes.get("objects", "invoices", "reference"))
+				yield* attempt(
+					attio.attributes.update("objects", "invoices", "reference", {
+						title: "Updated reference",
+					}),
+				)
+				yield* attempt(
+					attio.attributes.listSelectOptions(
+						"objects",
+						"invoices",
+						"category",
+						{ show_archived: true },
+					),
+				)
+				yield* attempt(
+					attio.attributes.createSelectOption(
+						"objects",
+						"invoices",
+						"category",
+						{ title: "New" },
+					),
+				)
+				yield* attempt(
+					attio.attributes.updateSelectOption(
+						"objects",
+						"invoices",
+						"category",
+						"new",
+						{ is_archived: true },
+					),
+				)
+				yield* attempt(
+					attio.attributes.listStatuses("lists", "opportunities", "stage"),
+				)
+				yield* attempt(
+					attio.attributes.createStatus("lists", "opportunities", "stage", {
+						title: "Qualified",
+					}),
+				)
+				yield* attempt(
+					attio.attributes.updateStatus(
+						"lists",
+						"opportunities",
+						"stage",
+						"qualified",
+						{ celebration_enabled: true },
+					),
+				)
+
+				yield* attempt(
+					attio.records.search({
+						query: "invoice",
+						objects: ["invoices"],
+						request_as: { type: "workspace" },
+					}),
+				)
+				yield* attempt(
+					attio.invoices.merge({
+						primary_record_id: id,
+						secondary_record_id: "44444444-4444-4444-8444-444444444444",
+					}),
+				)
+				yield* attempt(
+					attio.invoices.writeAttributeValues(id, "invoice_date", {
+						values: [
+							{
+								value: dateTime,
+								active_from: dateTime,
+								active_until: null,
+							},
+						],
+						replace_history: true,
+					}),
+				)
+				yield* attempt(
+					attio.lists.opportunities.writeAttributeValues(id, "title", {
+						values: [
+							{
+								value: "Enterprise",
+								active_from: dateTime,
+								active_until: null,
+							},
+						],
+						replace_history: true,
+					}),
+				)
+				yield* attempt(attio.sql.query("SELECT * FROM invoices"))
+
+				yield* attempt(
+					attio.emails.list({
+						linked_object: "invoices",
+						linked_record_ids: id,
+					}),
+				)
+				yield* attempt(
+					attio.meetings.list({
+						linked_object: "invoices",
+						linked_record_id: id,
+					}),
+				)
+				yield* attempt(
+					attio.meetings.create({
+						title: "Review",
+						description: "Invoice review",
+						start: { datetime: dateTime, timezone: "UTC" },
+						end: { datetime: dateTime, timezone: "UTC" },
+						is_all_day: false,
+						participants: [
+							{ is_organizer: true, status: "accepted", name: "Attio" },
+						],
+						linked_records: [{ object: "invoices", record_id: id }],
+					}),
+				)
+				yield* attempt(attio.meetings.get(id))
+				yield* attempt(attio.meetings.listCallRecordings(id))
+				yield* attempt(
+					attio.meetings.createCallRecording(id, {
+						video_url: "https://example.test/recording.mp4",
+					}),
+				)
+				yield* attempt(attio.meetings.getCallRecording(id, id))
+				yield* attempt(attio.meetings.deleteCallRecording(id, id))
+
+				yield* attempt(attio.files.list({ object: "invoices", record_id: id }))
+				yield* attempt(
+					attio.files.create({
+						object: "invoices",
+						record_id: id,
+						file_type: "folder",
+						name: "Documents",
+					}),
+				)
+				yield* attempt(
+					attio.files.upload({
+						file: new Blob(["invoice"], { type: "text/plain" }),
+						fileName: "invoice.txt",
+						object: "invoices",
+						record_id: id,
+					}),
+				)
+				yield* attempt(attio.files.get(id))
+				yield* attempt(attio.files.delete(id))
+				yield* attempt(attio.files.download(id))
+
+				const requests = http.requests.map((request) => {
+					const url = new URL(request.url)
+					return [request.method, url.pathname] as const
+				})
+
+				expect(requests).toEqual([
+					["GET", "/v2/objects/invoices/attributes"],
+					["POST", "/v2/objects/invoices/attributes"],
+					["GET", "/v2/objects/invoices/attributes/reference"],
+					["PATCH", "/v2/objects/invoices/attributes/reference"],
+					["GET", "/v2/objects/invoices/attributes/category/options"],
+					["POST", "/v2/objects/invoices/attributes/category/options"],
+					["PATCH", "/v2/objects/invoices/attributes/category/options/new"],
+					["GET", "/v2/lists/opportunities/attributes/stage/statuses"],
+					["POST", "/v2/lists/opportunities/attributes/stage/statuses"],
+					[
+						"PATCH",
+						"/v2/lists/opportunities/attributes/stage/statuses/qualified",
+					],
+					["POST", "/v2/objects/records/search"],
+					["POST", "/v2/objects/invoices/records/merge"],
+					[
+						"PUT",
+						`/v2/objects/invoices/records/${id}/attributes/invoice_date/values`,
+					],
+					[
+						"PUT",
+						`/v2/lists/opportunities/entries/${id}/attributes/title/values`,
+					],
+					["POST", "/v2/sql"],
+					["GET", "/v2/emails"],
+					["GET", "/v2/meetings"],
+					["POST", "/v2/meetings"],
+					["GET", `/v2/meetings/${id}`],
+					["GET", `/v2/meetings/${id}/call_recordings`],
+					["POST", `/v2/meetings/${id}/call_recordings`],
+					["GET", `/v2/meetings/${id}/call_recordings/${id}`],
+					["DELETE", `/v2/meetings/${id}/call_recordings/${id}`],
+					["GET", "/v2/files"],
+					["POST", "/v2/files"],
+					["POST", "/v2/files/upload"],
+					["GET", `/v2/files/${id}`],
+					["DELETE", `/v2/files/${id}`],
+					["GET", `/v2/files/${id}/download`],
+				])
+
+				expect(requestBody(http.requests[10]!)).toEqual({
+					query: "invoice",
+					objects: ["invoices"],
+					request_as: { type: "workspace" },
+				})
+				expect(requestBody(http.requests[11]!)).toEqual({
+					data: {
+						primary_record_id: id,
+						secondary_record_id: "44444444-4444-4444-8444-444444444444",
+					},
+				})
+				expect(requestBody(http.requests[12]!)).toEqual({
+					data: {
+						values: [
+							{
+								value: "2025-01-02",
+								active_from: timestamp,
+								active_until: null,
+							},
+						],
+						replace_history: true,
+					},
+				})
+				expect(requestBody(http.requests[14]!)).toEqual({
+					sql: "SELECT * FROM invoices",
+				})
+				expect(requestBody(http.requests[24]!)).toEqual({
+					object: "invoices",
+					record_id: id,
+					file_type: "folder",
+					name: "Documents",
+				})
+				expect(http.requests[25]?.body._tag).toBe("FormData")
+			}),
+			http.layer,
+		)
+	})
+
+	it.effect("decodes each new response family", () => {
+		const actor = { type: "system", id: null }
+		const http = makeHttpHarness([
+			{
+				data: [
+					{
+						id: {
+							workspace_id: workspaceId,
+							object_id: objectId,
+							attribute_id: recordId,
+						},
+						title: "Reference",
+						description: null,
+						api_slug: "reference",
+						type: "text",
+						is_system_attribute: false,
+						is_writable: true,
+						is_required: false,
+						is_unique: false,
+						is_multiselect: false,
+						is_default_value_enabled: false,
+						is_archived: false,
+						default_value: null,
+						relationship: null,
+						created_at: timestamp,
+						config: {
+							currency: {
+								default_currency_code: null,
+								display_type: null,
+							},
+							record_reference: { allowed_object_ids: null },
+						},
+					},
+				],
+			},
+			{
+				data: [
+					{
+						id: {
+							workspace_id: workspaceId,
+							object_id: objectId,
+							record_id: recordId,
+						},
+						record_text: "INV-001",
+						record_image: null,
+						object_slug: "invoices",
+					},
+				],
+			},
+			{ data: { rows: [{ count: 1 }] } },
+			{
+				data: [
+					{
+						id: {
+							workspace_id: workspaceId,
+							mailbox_id: objectId,
+							email_id: recordId,
+						},
+						sent_at: timestamp,
+						direction: "inbound",
+						subject_line: "Invoice",
+						participants: [],
+						linked_records: [],
+					},
+				],
+				pagination: { next_cursor: null },
+			},
+			{
+				data: {
+					id: { workspace_id: workspaceId, meeting_id: recordId },
+					title: "Review",
+					description: "Invoice review",
+					is_all_day: false,
+					start: { datetime: timestamp, timezone: "UTC" },
+					end: { datetime: timestamp, timezone: "UTC" },
+					participants: [],
+					linked_records: [],
+					created_at: timestamp,
+					created_by_actor: actor,
+				},
+			},
+			{
+				data: {
+					id: {
+						workspace_id: workspaceId,
+						meeting_id: recordId,
+						call_recording_id: objectId,
+					},
+					status: "completed",
+					web_url: "https://app.attio.com/calls/1",
+					created_by_actor: actor,
+					created_at: timestamp,
+					video_url: null,
+					transcript: null,
+				},
+			},
+			{
+				data: {
+					id: { workspace_id: workspaceId, file_id: recordId },
+					object_id: objectId,
+					object_slug: "invoices",
+					record_id: recordId,
+					storage_provider: "attio",
+					created_by_actor: actor,
+					created_at: timestamp,
+					file_type: "file",
+					name: "invoice.txt",
+					content_type: "text/plain",
+					content_size: 7,
+					parent_folder_id: null,
+				},
+			},
+		])
+
+		return provideClient(
+			Effect.gen(function* () {
+				const attio = yield* TestAttioClient
+				const attributes = yield* attio.attributes.list("objects", "invoices")
+				const records = yield* attio.records.search({
+					query: "INV",
+					objects: ["invoices"],
+					request_as: { type: "workspace" },
+				})
+				const rows = yield* attio.sql.query("SELECT 1 AS count")
+				const emails = yield* attio.emails.list()
+				const meeting = yield* attio.meetings.get(recordId)
+				const call = yield* attio.meetings.getCallRecording(recordId, objectId)
+				const file = yield* attio.files.get(recordId)
+
+				expect(attributes[0]?.api_slug).toBe("reference")
+				expect(records[0]?.record_text).toBe("INV-001")
+				expect(rows[0]).toEqual({ count: 1 })
+				expect(emails.data[0]?.subject_line).toBe("Invoice")
+				expect(meeting.title).toBe("Review")
+				expect(call.status).toBe("completed")
+				expect(file.file_type).toBe("file")
 			}),
 			http.layer,
 		)

@@ -2,7 +2,7 @@
 
 A strongly-typed, schema-driven SDK for the [Attio REST API](https://docs.attio.com/rest-api/overview) based on [Effect](https://effect.website)'s `HttpClient`
 
-This is highly experimental and not yet ready for production use - stuff will change! (see [issues](https://github.com/tobimori/effect-attio/issues))
+Requires Effect v4 RC
 
 ## Installation
 

@@ -91,20 +91,6 @@ type AttributeKind<Attribute extends AttributeDef> =
 		? Kind
 		: never
 
-type SelectTitle<Attribute extends AttributeDef> =
-	AttributeValue<Attribute> extends {
-		readonly option: { readonly title: infer Title extends string }
-	}
-		? Title
-		: string
-
-type StatusTitle<Attribute extends AttributeDef> =
-	AttributeValue<Attribute> extends {
-		readonly status: { readonly title: infer Title extends string }
-	}
-		? Title
-		: string
-
 type ReferenceTarget<Attribute extends AttributeDef> = Attribute extends {
 	readonly referenceTarget: infer Target extends string
 }
@@ -225,19 +211,13 @@ type RecordReferenceQueryAttribute<
 				readonly attributes: ReferencedQueryFields<Attribute, Objects, Depth>
 			})
 
-type SelectQueryAttribute<Attribute extends AttributeDef> = QueryColumn<
-	SelectTitle<Attribute> | string,
-	"eq"
-> & {
-	readonly option: QueryColumn<SelectTitle<Attribute> | string, "eq">
+type SelectQueryAttribute = StringColumn<"eq"> & {
+	readonly option: StringColumn<"eq">
 	readonly active_from: DateRangeColumn
 }
 
-type StatusQueryAttribute<Attribute extends AttributeDef> = QueryColumn<
-	StatusTitle<Attribute> | string,
-	"eq"
-> & {
-	readonly status: QueryColumn<StatusTitle<Attribute> | string, "eq">
+type StatusQueryAttribute = StringColumn<"eq"> & {
+	readonly status: StringColumn<"eq">
 	readonly active_from: DateRangeColumn
 }
 
@@ -265,8 +245,8 @@ type QueryAttributeByKind<
 		Objects,
 		Depth
 	>
-	readonly select: SelectQueryAttribute<Attribute>
-	readonly status: StatusQueryAttribute<Attribute>
+	readonly select: SelectQueryAttribute
+	readonly status: StatusQueryAttribute
 }
 
 type QueryAttribute<

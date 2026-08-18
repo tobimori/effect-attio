@@ -3,10 +3,7 @@ import {
 	type ReferenceTargetAttribute,
 } from "./schemas/attribute-builder.js"
 import { createSchemas, type CreatedSchemas } from "./schemas/helpers.js"
-import type * as Objects from "./schemas/objects.js"
 import * as StandardObjects from "./schemas/objects.js"
-
-type AttributeLike = AttributeDef
 
 type Digit = `${0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9}`
 
@@ -37,7 +34,7 @@ type IsSnakeCase<T extends string> = string extends T
 		: IsSnakeCaseWord<T>
 
 type ValidateAttributeSlugs<T> =
-	T extends Record<string, AttributeLike>
+	T extends Record<string, AttributeDef>
 		? {
 				[K in keyof T]: K extends string
 					? IsSnakeCase<K> extends true
@@ -77,12 +74,12 @@ export type ValidateAttioClientSchemas<T extends AttioClientSchemas> = {
 			: T[K]
 }
 
-export type ObjectConfig = boolean | Record<string, AttributeLike>
+export type ObjectConfig = boolean | Record<string, AttributeDef>
 export interface ListConfig<
 	Parent extends string = string,
-	Attributes extends Record<string, AttributeLike> = Record<
+	Attributes extends Record<string, AttributeDef> = Record<
 		string,
-		AttributeLike
+		AttributeDef
 	>,
 > {
 	readonly parent: Parent
@@ -92,17 +89,13 @@ export interface ListConfig<
 export type ListFields<T> =
 	T extends ListConfig<string, infer Attributes> ? Attributes : never
 export type ListParent<T> =
-	T extends ListConfig<infer Parent, Record<string, AttributeLike>>
+	T extends ListConfig<infer Parent, Record<string, AttributeDef>>
 		? Parent
 		: never
 
 export type AttioClientSchemas<
-	T extends Record<string | keyof typeof Objects, ObjectConfig> = {
-		[k: string]: ObjectConfig
-	},
-	L extends Record<string, ListConfig> = {
-		[k: string]: ListConfig
-	},
+	T extends Record<string, ObjectConfig> = Record<string, ObjectConfig>,
+	L extends Record<string, ListConfig> = Record<string, ListConfig>,
 > = {
 	objects?: T
 	lists?: L
@@ -154,7 +147,7 @@ export type EnabledObjects<T extends Record<string, ObjectConfig>> = {
 			? K extends keyof typeof StandardObjects
 				? StandardObjectFields<K, T>
 				: never
-			: T[K] extends Record<string, AttributeLike>
+			: T[K] extends Record<string, AttributeDef>
 				? T[K]
 				: never
 }
@@ -176,7 +169,7 @@ export type MergedObjectFields<T extends Record<string, ObjectConfig>> = {
 }
 
 function resolveReferenceFields(
-	fields: Record<string, AttributeLike>,
+	fields: Record<string, AttributeDef>,
 	configuredObjects: Record<string, ObjectConfig>,
 ) {
 	return Object.fromEntries(

@@ -2,17 +2,13 @@ import * as Schema from "effect/Schema"
 import type { AttributeDef } from "./attribute-builder.js"
 import * as Attributes from "./attributes.js"
 
-type AttributeLike = AttributeDef
-
 type BaseAttributes<IdField extends "record_id" | "entry_id"> = {
 	created_at: typeof Attributes.Timestamp.ReadOnly
 	created_by: typeof Attributes.ActorReference.ReadOnly
 } & Record<IdField, typeof Attributes.Text.ReadOnly>
 
 type AttributeFields<T> = {
-	[
-		K in keyof T as T[K] extends AttributeLike ? K : never
-	]: T[K] extends AttributeLike ? T[K] : never
+	[K in keyof T as T[K] extends AttributeDef ? K : never]: T[K]
 }
 
 type MergedFields<
@@ -49,7 +45,7 @@ export interface CreatedSchemas<T, IdField extends "record_id" | "entry_id"> {
 }
 
 export function createSchemas<
-	T extends Record<string, AttributeLike>,
+	T extends Record<string, AttributeDef>,
 	IdField extends "record_id" | "entry_id",
 >(fields: T, idField: IdField): CreatedSchemas<T, IdField> {
 	const baseAttributes = {

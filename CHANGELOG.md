@@ -1,5 +1,11 @@
 # effect-attio
 
+## 1.1.0
+
+### Minor Changes
+
+- 7c42e45: Add configured target objects to record reference IDs before sending requests.
+
 ## 1.0.0
 
 ### Major Changes

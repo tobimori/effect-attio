@@ -39,12 +39,15 @@ class MyAttioClient extends AttioClient<MyAttioClient>()("MyAttioClient", {
 	lists: {
 		// define custom lists with specific attributes
 		opportunities: {
-			title: Attributes.Text.Required,
-			value: Attributes.Currency,
-			probability: Attributes.Number,
-			expected_close_date: Attributes.Date,
-			stage: Attributes.Select.Required,
-			notes: Attributes.Text,
+			parent: "companies",
+			attributes: {
+				title: Attributes.Text.Required,
+				value: Attributes.Currency,
+				probability: Attributes.Number,
+				expected_close_date: Attributes.Date,
+				stage: Attributes.Select.Required,
+				notes: Attributes.Text,
+			},
 		},
 	},
 }) {}
@@ -56,7 +59,7 @@ const program = Effect.gen(function* () {
 		function* (error: { readonly message: string }) {
 			yield* Effect.log(`Company already exists: ${error.message}`)
 			const existing = yield* attio.companies.list({
-				filter: { domains: ["acme.com"] },
+				filter: { domains: "acme.com" },
 			})
 			return existing[0]
 		},
@@ -102,21 +105,93 @@ Effect.runPromise(
 )
 ```
 
+## Query builder
+
+Configured objects and lists have a Drizzle-style query builder:
+
+```typescript
+const findInvoices = attio.invoices.findMany({
+	where: (invoice, { and, eq, gte, startsWith }) =>
+		and(
+			startsWith(invoice.invoice_number, "INV-"),
+			gte(invoice.amount, 1000),
+			eq(invoice.customer.target_record_id, companyId),
+			startsWith(invoice.customer.attributes.name, "Acme"),
+		),
+	orderBy: (invoice, { asc, desc }) => [
+		desc(invoice.amount),
+		asc(invoice.invoice_number),
+	],
+	limit: 50,
+})
+```
+
+Record references expose the related object under `.attributes`. 
+
+
+For lists, the second callback argument contains the parent object's attributes. The builder converts these accesses to Attio paths.
+
+```typescript
+const findOpportunities = attio.lists.opportunities.findMany({
+	where: (opportunity, parent, { and, contains }) =>
+		and(
+			contains(opportunity.title, "Enterprise"),
+			contains(parent.name, "Acme"),
+		),
+})
+```
+
+Use `findFirst` when only one result is needed. It returns `Option.none()` when
+no record or entry matches.
+
+```typescript
+const findInvoice = attio.invoices.findFirst({
+	where: (invoice, { eq }) => eq(invoice.invoice_number, "INV-2024-001"),
+})
+```
+
+Available comparison functions are `eq`, `inArray`, `isNotEmpty`, `contains`, `startsWith`, `endsWith`, `lt`, `lte`, `gt`, and `gte`. Filters can be combined with `and` and `or`. Use `not` to negate one comparison.
+
+The native `list({ filter, sorts })` API is also type-safe. Use it when direct access to Attio's JSON query format is preferred:
+
+```typescript
+const findInvoices = attio.invoices.list({
+	filter: {
+		$and: [
+			{ invoice_number: { $starts_with: "INV-" } },
+			{
+				path: [
+					["invoices", "customer"],
+					["companies", "domains"],
+				],
+				constraints: { root_domain: { $ends_with: ".com" } },
+			},
+		],
+	},
+	sorts: [
+		{ attribute: "amount", direction: "desc" },
+		{
+			direction: "asc",
+			path: [
+				["invoices", "customer"],
+				["companies", "name"],
+			],
+		},
+	],
+})
+```
+
 ## Custom object references
 
 Use `RecordReference.For` to create a reference with a specific custom object target:
 
 ```typescript
-const ProjectReference = Attributes.RecordReference.For("projects")
-
 class MyAttioClient extends AttioClient<MyAttioClient>()("MyAttioClient", {
 	objects: {
 		invoices: {
-			project: ProjectReference,
-			related_projects: ProjectReference.Multiple,
+			project: Attributes.RecordReference.For("projects"),
+			related_projects: Attributes.RecordReference.For("projects").Multiple,
 		},
 	},
 }) {}
 ```
-
-The target stays as the `"projects"` literal in input and output types. The `Required`, `ReadOnly`, and `Multiple` variants are also available.

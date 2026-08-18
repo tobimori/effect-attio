@@ -21,7 +21,9 @@ type ReferenceTargetVariations<
 	Field extends AttributeDef,
 > = {
 	readonly [
-		K in keyof Field as K extends "Required" | "ReadOnly" ? K : never
+		K in keyof Field as K extends "Required" | "ReadOnly" | "ReadOnlyOptional"
+			? K
+			: never
 	]: Field[K] extends AttributeDef
 		? WithReferenceTarget<ObjectName, Field[K]>
 		: Field[K]
@@ -49,7 +51,12 @@ export const withReferenceTarget = <
 	const mark = (attribute: AttributeDef) => {
 		Object.defineProperty(attribute, "referenceTarget", { value: objectName })
 
-		for (const variation of ["Required", "ReadOnly", "Multiple"] as const) {
+		for (const variation of [
+			"Required",
+			"ReadOnly",
+			"ReadOnlyOptional",
+			"Multiple",
+		] as const) {
 			const nestedAttribute = (
 				attribute as AttributeDef &
 					Partial<Record<typeof variation, AttributeDef>>
@@ -145,6 +152,11 @@ type BaseAttributeVariations<
 		output: ReturnType<typeof ApiSingleValueRequired<EnrichedOutput<TOutput>>>
 		value: EnrichedOutput<TOutput>
 	}
+	ReadOnlyOptional: {
+		input: Schema.Void
+		output: ReturnType<typeof ApiSingleValue<EnrichedOutput<TOutput>>>
+		value: EnrichedOutput<TOutput>
+	}
 }
 
 type AttributeWithMultiple<
@@ -161,6 +173,11 @@ type AttributeWithMultiple<
 			value: EnrichedOutput<TOutput>
 		}
 		ReadOnly: {
+			input: Schema.Void
+			output: Schema.$Array<EnrichedOutput<TOutput>>
+			value: EnrichedOutput<TOutput>
+		}
+		ReadOnlyOptional: {
 			input: Schema.Void
 			output: Schema.$Array<EnrichedOutput<TOutput>>
 			value: EnrichedOutput<TOutput>
@@ -213,6 +230,11 @@ export function makeAttribute<
 				output: ApiSingleValueRequired(enrichedOutput),
 				value: enrichedOutput,
 			},
+			ReadOnlyOptional: {
+				input: Schema.Void,
+				output: ApiSingleValue(enrichedOutput),
+				value: enrichedOutput,
+			},
 		},
 	)
 
@@ -233,6 +255,11 @@ export function makeAttribute<
 					ReadOnly: {
 						input: Schema.Void,
 						output: Schema.Array(enrichedOutput).check(Schema.isMinLength(1)),
+						value: enrichedOutput,
+					},
+					ReadOnlyOptional: {
+						input: Schema.Void,
+						output: Schema.Array(enrichedOutput),
 						value: enrichedOutput,
 					},
 				},

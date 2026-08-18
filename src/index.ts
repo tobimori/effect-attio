@@ -4,6 +4,11 @@ export { AttioHttpClient } from "./http-client.js"
 
 export type { AttributeDef } from "./schemas/attribute-builder.js"
 export * as Attributes from "./schemas/attributes.js"
+export type {
+	NativeQueryFilter,
+	NativeQueryParams,
+	QueryBuilderOptions,
+} from "./shared/query-builder.js"
 
 export { AttioComments } from "./services/comments.js"
 export { AttioEntries } from "./services/entries.js"

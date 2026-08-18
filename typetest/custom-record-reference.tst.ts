@@ -61,4 +61,38 @@ describe("Custom record references", () => {
 			Invoice["values"]["custom_objects"][number]["target_object"]
 		>().type.toBe<"custom_objects">()
 	})
+
+	it("preserves the target in query types", () => {
+		expect(client.invoices.list).type.toBeCallableWith({
+			filter: {
+				custom_object: {
+					target_object: "custom_objects",
+					target_record_id: recordId,
+				},
+			},
+		})
+		expect(client.invoices.list).type.not.toBeCallableWith({
+			filter: {
+				custom_object: {
+					target_object: "other_objects",
+					target_record_id: recordId,
+				},
+			},
+		})
+
+		client.invoices.findMany({
+			where: (invoice, { eq }) => {
+				expect(eq).type.toBeCallableWith(
+					invoice.custom_object.target_object,
+					"custom_objects",
+				)
+				expect(eq).type.not.toBeCallableWith(
+					invoice.custom_object.target_object,
+					"other_objects",
+				)
+
+				return eq(invoice.custom_object.target_object, "custom_objects")
+			},
+		})
+	})
 })

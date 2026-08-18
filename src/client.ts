@@ -1,12 +1,15 @@
 import * as Config from "effect/Config"
 import * as Context from "effect/Context"
 import * as Effect from "effect/Effect"
+import * as Arr from "effect/Array"
 import * as Layer from "effect/Layer"
 import * as Schema from "effect/Schema"
 import type * as HttpClient from "effect/unstable/http/HttpClient"
 import {
 	type AttioClientSchemas,
 	type ListConfig,
+	type ListFields,
+	type ListParent,
 	type MergedObjectFields,
 	type ObjectConfig,
 	processSchemas,
@@ -15,6 +18,7 @@ import {
 import { AttioHttpClient, type AttioHttpClientOptions } from "./http-client.js"
 import type { CreatedSchemas } from "./schemas/helpers.js"
 import type { AttributeDef } from "./schemas/attribute-builder.js"
+import { compileQueryBuilderOptions } from "./shared/query-builder.js"
 import { AttioComments } from "./services/comments.js"
 import { AttioEntries, type GenericAttioEntries } from "./services/entries.js"
 import { AttioLists, type GenericAttioLists } from "./services/lists.js"
@@ -40,6 +44,13 @@ type ConfiguredObjectName<T extends AttioClientSchemas> = Extract<
 	string
 >
 
+type ConfiguredObjectFields<T extends AttioClientSchemas> = {
+	[K in keyof MergedObjectFields<ConfiguredObjects<T>>]: CreatedSchemas<
+		MergedObjectFields<ConfiguredObjects<T>>[K],
+		"record_id"
+	>["fields"]
+}
+
 type AttioClientShape<T extends AttioClientSchemas> = {
 	[K in keyof MergedObjectFields<ConfiguredObjects<T>>]: GenericAttioRecords<
 		CreatedSchemas<
@@ -53,15 +64,19 @@ type AttioClientShape<T extends AttioClientSchemas> = {
 		CreatedSchemas<
 			MergedObjectFields<ConfiguredObjects<T>>[K],
 			"record_id"
-		>["fields"]
+		>["fields"],
+		ConfiguredObjectFields<T>,
+		Extract<K, string>
 	>
 } & {
 	lists: {
 		[K in keyof ConfiguredLists<T>]: GenericAttioEntries<
-			CreatedSchemas<ConfiguredLists<T>[K], "entry_id">["input"],
-			CreatedSchemas<ConfiguredLists<T>[K], "entry_id">["output"],
-			CreatedSchemas<ConfiguredLists<T>[K], "entry_id">["fields"],
-			ConfiguredObjectName<T>
+			CreatedSchemas<ListFields<ConfiguredLists<T>[K]>, "entry_id">["input"],
+			CreatedSchemas<ListFields<ConfiguredLists<T>[K]>, "entry_id">["output"],
+			CreatedSchemas<ListFields<ConfiguredLists<T>[K]>, "entry_id">["fields"],
+			Extract<ListParent<ConfiguredLists<T>[K]>, ConfiguredObjectName<T>>,
+			ConfiguredObjectFields<T>,
+			Extract<K, string>
 		>
 	} & GenericAttioLists<ConfiguredObjectName<T>>
 	comments: AttioComments["Service"]
@@ -145,8 +160,35 @@ export const AttioClient =
 												schemas.lists[listName as keyof typeof schemas.lists]
 											const input = listSchema?.input ?? Schema.Any
 											const output = listSchema?.output ?? Schema.Any
+											const queryContext = {
+												resource: listName,
+												parentResource: listSchema?.parent,
+												fields: listSchema?.fields,
+												objects: schemas.objects,
+											}
 
 											return {
+												findMany: (options: any = {}) =>
+													entries.list(
+														listName,
+														{ input, output },
+														compileQueryBuilderOptions(options, queryContext),
+													),
+												findFirst: (options: any = {}) =>
+													Effect.map(
+														entries.list(
+															listName,
+															{ input, output },
+															{
+																...compileQueryBuilderOptions(
+																	options,
+																	queryContext,
+																),
+																limit: 1,
+															},
+														),
+														(entries) => Arr.head(entries),
+													),
 												list: (params?: any) =>
 													entries.list(listName, { input, output }, params),
 												assert: (data: any) =>
@@ -209,8 +251,34 @@ export const AttioClient =
 											schemas.objects[resource as keyof typeof schemas.objects]
 										const input = schema?.input ?? Schema.Any
 										const output = schema?.output ?? Schema.Any
+										const queryContext = {
+											resource,
+											fields: schema?.fields,
+											objects: schemas.objects,
+										}
 
 										return {
+											findMany: (options: any = {}) =>
+												records.list(
+													resource,
+													{ input, output },
+													compileQueryBuilderOptions(options, queryContext),
+												),
+											findFirst: (options: any = {}) =>
+												Effect.map(
+													records.list(
+														resource,
+														{ input, output },
+														{
+															...compileQueryBuilderOptions(
+																options,
+																queryContext,
+															),
+															limit: 1,
+														},
+													),
+													(records) => Arr.head(records),
+												),
 											list: (params?: any) =>
 												records.list(resource, { input, output }, params),
 

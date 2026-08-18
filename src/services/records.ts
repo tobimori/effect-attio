@@ -1,6 +1,7 @@
 import * as Context from "effect/Context"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
+import type * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
 import * as Struct from "effect/Struct"
 import * as HttpClientRequest from "effect/unstable/http/HttpClientRequest"
@@ -17,6 +18,10 @@ import {
 } from "../error-transforms.js"
 import { AttioHttpClient } from "../http-client.js"
 import type { AttributeDef } from "../schemas/attribute-builder.js"
+import type {
+	NativeQueryParams,
+	QueryBuilderOptions,
+} from "../shared/query-builder.js"
 import { QueryParams } from "../shared/query.js"
 import { DataStruct, Uuid } from "../shared/schemas.js"
 
@@ -31,6 +36,17 @@ type AttributeValueSchema<T extends AttributeDef> = T extends {
 }
 	? Value
 	: typeof Schema.Unknown
+
+type FirstRecord<TInput extends Schema.Top, TOutput extends Schema.Constraint> =
+	ReturnType<
+		typeof AttioRecords.Service.list<TInput, TOutput>
+	> extends Effect.Effect<
+		ReadonlyArray<infer Record>,
+		infer Error,
+		infer Requirements
+	>
+		? Effect.Effect<Option.Option<Record>, Error, Requirements>
+		: never
 
 const makeAttioRecords = Effect.gen(function* () {
 	const http = yield* AttioHttpClient
@@ -437,9 +453,24 @@ export type GenericAttioRecords<
 	TInput extends Schema.Top,
 	TOutput extends Schema.Constraint,
 	TFields extends Record<string, AttributeDef>,
+	TObjects extends Record<string, Record<string, AttributeDef>> = Record<
+		string,
+		Record<string, AttributeDef>
+	>,
+	TObjectName extends Extract<keyof TObjects, string> = Extract<
+		keyof TObjects,
+		string
+	>,
 > = {
+	findMany: (
+		options?: QueryBuilderOptions<TFields, TObjects>,
+	) => ReturnType<typeof AttioRecords.Service.list<TInput, TOutput>>
+	findFirst: (
+		options?: QueryBuilderOptions<TFields, TObjects>,
+	) => FirstRecord<TInput, TOutput>
+
 	list: (
-		params?: Parameters<typeof AttioRecords.Service.list<TInput, TOutput>>[2],
+		params?: NativeQueryParams<TFields, TObjects, TObjectName>,
 	) => ReturnType<typeof AttioRecords.Service.list<TInput, TOutput>>
 
 	assert: (

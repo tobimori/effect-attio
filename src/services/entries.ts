@@ -1,6 +1,7 @@
 import * as Context from "effect/Context"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
+import type * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
 import * as HttpClientRequest from "effect/unstable/http/HttpClientRequest"
 import * as HttpClientResponse from "effect/unstable/http/HttpClientResponse"
@@ -15,6 +16,10 @@ import {
 } from "../error-transforms.js"
 import { AttioHttpClient } from "../http-client.js"
 import type { AttributeDef } from "../schemas/attribute-builder.js"
+import type {
+	NativeQueryParams,
+	QueryBuilderOptions,
+} from "../shared/query-builder.js"
 import { QueryParams } from "../shared/query.js"
 import { DataStruct, Uuid } from "../shared/schemas.js"
 
@@ -29,6 +34,17 @@ type AttributeValueSchema<T extends AttributeDef> = T extends {
 }
 	? Value
 	: typeof Schema.Unknown
+
+type FirstEntry<TInput extends Schema.Top, TOutput extends Schema.Constraint> =
+	ReturnType<
+		typeof AttioEntries.Service.list<TInput, TOutput>
+	> extends Effect.Effect<
+		ReadonlyArray<infer Entry>,
+		infer Error,
+		infer Requirements
+	>
+		? Effect.Effect<Option.Option<Entry>, Error, Requirements>
+		: never
 
 const makeAttioEntries = Effect.gen(function* () {
 	const http = yield* AttioHttpClient
@@ -409,9 +425,34 @@ export type GenericAttioEntries<
 	TOutput extends Schema.Constraint,
 	TFields extends Record<string, AttributeDef>,
 	TObjectName extends string = string,
+	TObjects extends Record<string, Record<string, AttributeDef>> = Record<
+		string,
+		Record<string, AttributeDef>
+	>,
+	TListName extends string = string,
 > = {
+	findMany: (
+		options?: QueryBuilderOptions<
+			TFields,
+			TObjects,
+			Extract<TObjectName, keyof TObjects & string>
+		>,
+	) => ReturnType<typeof AttioEntries.Service.list<TInput, TOutput>>
+	findFirst: (
+		options?: QueryBuilderOptions<
+			TFields,
+			TObjects,
+			Extract<TObjectName, keyof TObjects & string>
+		>,
+	) => FirstEntry<TInput, TOutput>
+
 	list: (
-		params?: Parameters<typeof AttioEntries.Service.list<TInput, TOutput>>[2],
+		params?: NativeQueryParams<
+			TFields,
+			TObjects,
+			TListName,
+			Extract<TObjectName, keyof TObjects & string>
+		>,
 	) => ReturnType<typeof AttioEntries.Service.list<TInput, TOutput>>
 	assert: (
 		data: Omit<

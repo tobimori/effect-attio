@@ -1,5 +1,6 @@
 import { Effect, Redacted } from "effect"
 import type { Config, Layer } from "effect"
+import type * as Option from "effect/Option"
 import type { HttpClient } from "effect/unstable/http"
 import { AttioClient, Attributes } from "effect-attio"
 import { describe, expect, it } from "tstyche"
@@ -9,15 +10,20 @@ class TestAttioClient extends AttioClient<TestAttioClient>()(
 	{
 		objects: {
 			companies: true,
+			workspaces: true,
 			invoices: {
 				invoice_number: Attributes.Text.Required,
 				amount: Attributes.Currency.Required,
+				company: Attributes.CompanyRecordReference,
 			},
 		},
 		lists: {
 			opportunities: {
-				title: Attributes.Text.Required,
-				value: Attributes.Currency,
+				parent: "companies",
+				attributes: {
+					title: Attributes.Text.Required,
+					value: Attributes.Currency,
+				},
 			},
 		},
 	},
@@ -34,7 +40,10 @@ describe("AttioClient", () => {
 				invoices: { invoice_number: Attributes.Text },
 			},
 			lists: {
-				opportunities: { expected_close_date: Attributes.Date },
+				opportunities: {
+					parent: "companies",
+					attributes: { expected_close_date: Attributes.Date },
+				},
 			},
 		})
 		expect(defineClient).type.not.toBeCallableWith("CamelCaseClient", {
@@ -44,7 +53,18 @@ describe("AttioClient", () => {
 		})
 		expect(defineClient).type.not.toBeCallableWith("KebabCaseClient", {
 			lists: {
-				opportunities: { "expected-close-date": Attributes.Date },
+				opportunities: {
+					parent: "companies",
+					attributes: { "expected-close-date": Attributes.Date },
+				},
+			},
+		})
+		expect(defineClient).type.not.toBeCallableWith("DisabledParentClient", {
+			lists: {
+				opportunities: {
+					parent: "deals",
+					attributes: { title: Attributes.Text },
+				},
 			},
 		})
 	})
@@ -85,17 +105,271 @@ describe("AttioClient", () => {
 
 	it("supports current record query parameters", () => {
 		expect(client.invoices.list).type.toBeCallableWith({
+			filter: {
+				$and: [
+					{ invoice_number: { $starts_with: "INV-" } },
+					{ amount: { currency_value: { $gte: 100 } } },
+					{
+						company: {
+							target_record_id: {
+								$eq: "550e8400-e29b-41d4-a716-446655440000",
+							},
+						},
+					},
+				],
+			},
+			sorts: [
+				{ direction: "desc", attribute: "amount", field: "currency_value" },
+			],
+		})
+		expect(client.invoices.list).type.toBeCallableWith({
 			filter_view_id: "550e8400-e29b-41d4-a716-446655440000",
 			sorts: [
 				{
 					direction: "asc",
-					path: [["invoices", "customer"]],
+					path: [
+						["invoices", "company"],
+						["companies", "name"],
+					],
+				},
+			],
+		})
+		expect(client.invoices.list).type.toBeCallableWith({
+			filter: {
+				path: [
+					["invoices", "company"],
+					["companies", "domains"],
+				],
+				constraints: { root_domain: { $ends_with: ".com" } },
+			},
+			sorts: [
+				{
+					direction: "asc",
+					path: [
+						["invoices", "company"],
+						["companies", "team"],
+						["people", "name"],
+					],
+					field: "last_name",
+				},
+			],
+		})
+		expect(client.invoices.list).type.not.toBeCallableWith({
+			filter: {
+				path: [
+					["invoices", "amount"],
+					["companies", "name"],
+				],
+				constraints: { $contains: "Attio" },
+			},
+		})
+		expect(client.invoices.list).type.not.toBeCallableWith({
+			filter: {
+				path: [
+					["invoices", "company"],
+					["people", "name"],
+				],
+				constraints: { full_name: { $contains: "Attio" } },
+			},
+		})
+		expect(client.invoices.list).type.not.toBeCallableWith({
+			filter: {
+				path: [
+					["invoices", "company"],
+					["companies", "twitter_follower_count"],
+				],
+				constraints: { $contains: "100" },
+			},
+		})
+		expect(client.invoices.list).type.not.toBeCallableWith({
+			sorts: [
+				{
+					direction: "asc",
+					path: [
+						["invoices", "company"],
+						["companies", "name"],
+					],
+					field: "last_name",
 				},
 			],
 		})
 		expect(client.invoices.list).type.not.toBeCallableWith({
 			filter: { invoice_number: "INV-001" },
 			filter_view_id: "550e8400-e29b-41d4-a716-446655440000",
+		})
+		expect(client.invoices.list).type.not.toBeCallableWith({
+			filter: { unknown_field: "value" },
+		})
+		expect(client.invoices.list).type.not.toBeCallableWith({
+			filter: { amount: { $contains: "100" } },
+		})
+		expect(client.invoices.list).type.not.toBeCallableWith({
+			filter: {
+				company: "550e8400-e29b-41d4-a716-446655440000",
+			},
+		})
+		expect(client.invoices.list).type.not.toBeCallableWith({
+			sorts: [{ direction: "asc", attribute: "amount", field: "last_name" }],
+		})
+		expect(client.invoices.list).type.toBeCallableWith({
+			filter: { $not: { invoice_number: "INV-001" } },
+		})
+		expect(client.invoices.list).type.not.toBeCallableWith({
+			filter: {
+				$not: {
+					$or: [{ invoice_number: "INV-001" }, { invoice_number: "INV-002" }],
+				},
+			},
+		})
+		expect(client.invoices.list).type.not.toBeCallableWith({
+			filter: {
+				path: [
+					["invoices", "company"],
+					["companies", "associated_workspaces"],
+					["workspaces", "company"],
+					["companies", "associated_workspaces"],
+					["workspaces", "company"],
+					["companies", "name"],
+				],
+				constraints: { $contains: "Attio" },
+			},
+		})
+	})
+
+	it("builds type-safe record queries", () => {
+		expect(client.invoices.findMany).type.toBeCallableWith()
+		client.invoices.findMany({
+			where: (invoice, operators) => {
+				const comparison = operators.eq(invoice.invoice_number, "INV-001")
+				const logical = operators.and(comparison, comparison)
+
+				expect(operators.not).type.toBeCallableWith(comparison)
+				expect(operators.not).type.not.toBeCallableWith(logical)
+				return operators.not(comparison)
+			},
+		})
+
+		const invoices = client.invoices.findMany({
+			where: (invoice, { and, eq, gte, startsWith }) => {
+				expect(invoice).type.toHaveProperty("invoice_number")
+				expect(invoice).type.toHaveProperty("amount")
+				expect(invoice).type.not.toHaveProperty("unknown_field")
+
+				expect(startsWith).type.toBeCallableWith(invoice.invoice_number, "INV-")
+				expect(startsWith).type.not.toBeCallableWith(invoice.amount, "INV-")
+				expect(gte).type.toBeCallableWith(invoice.amount, 100)
+				expect(gte).type.not.toBeCallableWith(invoice.invoice_number, 100)
+				expect(eq).type.toBeCallableWith(
+					invoice.company.target_record_id,
+					"550e8400-e29b-41d4-a716-446655440000",
+				)
+
+				return and(
+					startsWith(invoice.invoice_number, "INV-"),
+					gte(invoice.amount, 100),
+				)
+			},
+			orderBy: (invoice, { asc, desc }) => [
+				desc(invoice.amount),
+				asc(invoice.invoice_number),
+			],
+			limit: 50,
+		})
+
+		expect(invoices).type.toBe<ReturnType<typeof client.invoices.list>>()
+
+		const invoice = client.invoices.findFirst({
+			where: (invoice, { eq }) => eq(invoice.invoice_number, "INV-001"),
+		})
+
+		type Invoice = Effect.Success<typeof invoices>[number]
+		expect(invoice).type.toBe<
+			Effect.Effect<Option.Option<Invoice>, Effect.Error<typeof invoices>>
+		>()
+	})
+
+	it("supports structured attribute query fields", () => {
+		client.people.findMany({
+			where: (person, { and, eq, gte, inArray, isNotEmpty, startsWith }) => {
+				expect(isNotEmpty).type.toBeCallableWith(
+					person.first_interaction.owner_member_id,
+				)
+				expect(eq).type.toBeCallableWith(
+					person.first_interaction.interaction_type,
+					"email",
+				)
+				expect(eq).type.not.toBeCallableWith(
+					person.first_interaction.interaction_type,
+					"phone",
+				)
+				expect(inArray).type.toBeCallableWith(person.description, [
+					"one",
+					"two",
+				])
+				expect(inArray).type.not.toBeCallableWith(person.email_addresses, [
+					"person@example.com",
+				])
+				expect(person.email_addresses).type.not.toHaveProperty(
+					"email_local_specifier",
+				)
+				expect(startsWith).type.not.toBeCallableWith(
+					person.primary_location.country_code,
+					"U",
+				)
+
+				return and(
+					isNotEmpty(person.first_interaction.owner_member_id),
+					gte(person.first_interaction.interacted_at, "2025-01-01T00:00:00Z"),
+				)
+			},
+		})
+
+		client.companies.findMany({
+			where: (company, { eq, gte }) => {
+				expect(gte).type.toBeCallableWith(
+					company.categories.active_from,
+					"2025-01-01T00:00:00Z",
+				)
+				expect(eq).type.not.toBeCallableWith(
+					company.categories.active_from,
+					"2025-01-01T00:00:00Z",
+				)
+
+				return gte(company.categories.active_from, "2025-01-01T00:00:00Z")
+			},
+		})
+
+		expect(client.invoices.list).type.toBeCallableWith({
+			filter: { amount: { $gte: "100.00" } },
+		})
+	})
+
+	it("builds typed relationship paths", () => {
+		client.people.findMany({
+			where: (person, { contains }) =>
+				contains(person.company.attributes.domains.root_domain, "attio.com"),
+			orderBy: (person, { asc }) => asc(person.company.attributes.name),
+		})
+
+		client.people.findMany({
+			where: (person, { contains }) =>
+				contains(
+					person.company.attributes.associated_workspaces.attributes.name,
+					"Attio",
+				),
+		})
+
+		client.invoices.findMany({
+			where: (invoice, { contains }) => {
+				const maximumDepthWorkspace =
+					invoice.company.attributes.associated_workspaces.attributes.company
+						.attributes.associated_workspaces.attributes
+
+				expect(maximumDepthWorkspace.company).type.not.toHaveProperty(
+					"attributes",
+				)
+				return contains(maximumDepthWorkspace.name, "Attio")
+			},
 		})
 	})
 
@@ -146,10 +420,65 @@ describe("AttioClient", () => {
 		expect(client.lists.opportunities.list).type.toBeCallableWith({
 			filter_view_id: "550e8400-e29b-41d4-a716-446655440000",
 		})
+		expect(client.lists.opportunities.list).type.toBeCallableWith({
+			filter: {
+				path: [
+					["opportunities", "parent_record"],
+					["companies", "domains"],
+				],
+				constraints: { root_domain: { $eq: "attio.com" } },
+			},
+			sorts: [
+				{
+					direction: "asc",
+					path: [
+						["opportunities", "parent_record"],
+						["companies", "name"],
+					],
+				},
+			],
+		})
+		expect(client.lists.opportunities.list).type.not.toBeCallableWith({
+			filter: {
+				path: [
+					["opportunities", "parent_record"],
+					["people", "name"],
+				],
+				constraints: { full_name: { $eq: "Attio" } },
+			},
+		})
+		expect(client.lists.opportunities.list).type.not.toBeCallableWith({
+			sorts: [
+				{
+					direction: "asc",
+					path: [
+						["opportunities", "parent_record"],
+						["companies", "domains"],
+					],
+					field: "email_domain",
+				},
+			],
+		})
 		expect(client.lists.opportunities.list).type.not.toBeCallableWith({
 			filter: { title: "New opportunity" },
 			filter_view_id: "550e8400-e29b-41d4-a716-446655440000",
 		})
+	})
+
+	it("builds type-safe list entry queries", () => {
+		const entries = client.lists.opportunities.findMany({
+			where: (opportunity, parent, { and, contains, gte }) =>
+				and(
+					contains(opportunity.title, "Enterprise"),
+					gte(opportunity.value, 1000),
+					contains(parent.name, "Attio"),
+				),
+			orderBy: (opportunity, _parent, { desc }) => desc(opportunity.value),
+		})
+
+		expect(entries).type.toBe<
+			ReturnType<typeof client.lists.opportunities.list>
+		>()
 	})
 
 	it("lists object views with cursor pagination", () => {

@@ -1,5 +1,6 @@
 import { Effect, Redacted } from "effect"
 import type { Config, Layer } from "effect"
+import type * as DateTime from "effect/DateTime"
 import type * as Option from "effect/Option"
 import type { HttpClient } from "effect/unstable/http"
 import { AttioClient, Attributes } from "effect-attio"
@@ -14,6 +15,8 @@ class TestAttioClient extends AttioClient<TestAttioClient>()(
 			invoices: {
 				invoice_number: Attributes.Text.Required,
 				amount: Attributes.Currency.Required,
+				invoice_date: Attributes.Date,
+				created_at: Attributes.Timestamp.ReadOnlyOptional,
 				company: Attributes.CompanyRecordReference,
 			},
 		},
@@ -30,6 +33,7 @@ class TestAttioClient extends AttioClient<TestAttioClient>()(
 ) {}
 
 declare const client: TestAttioClient["Service"]
+declare const dateTime: DateTime.DateTime
 
 describe("AttioClient", () => {
 	it("requires snake-case configured attribute slugs", () => {
@@ -204,6 +208,9 @@ describe("AttioClient", () => {
 			filter: { amount: { $contains: "100" } },
 		})
 		expect(client.invoices.list).type.not.toBeCallableWith({
+			filter: { invoice_date: { $gte: dateTime } },
+		})
+		expect(client.invoices.list).type.not.toBeCallableWith({
 			filter: {
 				company: "550e8400-e29b-41d4-a716-446655440000",
 			},
@@ -259,6 +266,8 @@ describe("AttioClient", () => {
 				expect(startsWith).type.not.toBeCallableWith(invoice.amount, "INV-")
 				expect(gte).type.toBeCallableWith(invoice.amount, 100)
 				expect(gte).type.not.toBeCallableWith(invoice.invoice_number, 100)
+				expect(gte).type.toBeCallableWith(invoice.invoice_date, dateTime)
+				expect(gte).type.toBeCallableWith(invoice.created_at, dateTime)
 				expect(eq).type.toBeCallableWith(
 					invoice.company.target_record_id,
 					"550e8400-e29b-41d4-a716-446655440000",

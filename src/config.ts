@@ -47,19 +47,54 @@ type ValidateAttributeSlugs<T> =
 			}
 		: T
 
-type ValidateResourceAttributeSlugs<T> =
+type ValidateObjectAttributeSlugs<T> =
 	T extends Record<string, unknown>
 		? { [K in keyof T]: ValidateAttributeSlugs<T[K]> }
 		: T
 
+type ConfiguredSchemaObjects<T extends AttioClientSchemas> =
+	T["objects"] extends Record<string, ObjectConfig> ? T["objects"] : {}
+
+type ValidateListConfigs<T, Objects extends Record<string, ObjectConfig>> =
+	T extends Record<string, unknown>
+		? {
+				[K in keyof T]: T[K] extends ListConfig<infer Parent, infer Attributes>
+					? {
+							parent: Parent extends AvailableObjectNames<Objects>
+								? Parent
+								: never
+							attributes: ValidateAttributeSlugs<Attributes>
+						}
+					: never
+			}
+		: T
+
 export type ValidateAttioClientSchemas<T extends AttioClientSchemas> = {
-	[K in keyof T]: K extends "objects" | "lists"
-		? ValidateResourceAttributeSlugs<T[K]>
-		: T[K]
+	[K in keyof T]: K extends "objects"
+		? ValidateObjectAttributeSlugs<T[K]>
+		: K extends "lists"
+			? ValidateListConfigs<T[K], ConfiguredSchemaObjects<T>>
+			: T[K]
 }
 
 export type ObjectConfig = boolean | Record<string, AttributeLike>
-export type ListConfig = Record<string, AttributeLike>
+export interface ListConfig<
+	Parent extends string = string,
+	Attributes extends Record<string, AttributeLike> = Record<
+		string,
+		AttributeLike
+	>,
+> {
+	readonly parent: Parent
+	readonly attributes: Attributes
+}
+
+export type ListFields<T> =
+	T extends ListConfig<string, infer Attributes> ? Attributes : never
+export type ListParent<T> =
+	T extends ListConfig<infer Parent, Record<string, AttributeLike>>
+		? Parent
+		: never
 
 export type AttioClientSchemas<
 	T extends Record<string | keyof typeof Objects, ObjectConfig> = {
@@ -213,7 +248,10 @@ export function processSchemas<
 
 	// process lists
 	for (const [name, listConfig] of Object.entries(config.lists ?? [])) {
-		listSchemas[name] = createSchemas(listConfig, "entry_id")
+		listSchemas[name] = {
+			...createSchemas(listConfig.attributes, "entry_id"),
+			parent: listConfig.parent,
+		}
 	}
 
 	return {
@@ -224,7 +262,9 @@ export function processSchemas<
 			>
 		},
 		lists: listSchemas as {
-			[K in keyof L]: CreatedSchemas<L[K], "entry_id">
+			[K in keyof L]: CreatedSchemas<ListFields<L[K]>, "entry_id"> & {
+				parent: ListParent<L[K]>
+			}
 		},
 	}
 }

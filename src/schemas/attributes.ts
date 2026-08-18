@@ -114,6 +114,7 @@ export const Currency = makeAttribute({
  * @see https://docs.attio.com/docs/attribute-types/attribute-types-date
  */
 export const Date = makeAttribute({
+	queryValueType: "date",
 	input: Schema.Union([
 		Schema.DateTimeUtcFromString,
 		Schema.Struct({
@@ -750,6 +751,7 @@ export const Text = makeAttribute({
  * @see https://docs.attio.com/docs/attribute-types/attribute-types-timestamp
  */
 export const Timestamp = makeAttribute({
+	queryValueType: "timestamp",
 	input: Schema.Union([
 		Schema.DateTimeUtcFromString,
 		Schema.Struct({

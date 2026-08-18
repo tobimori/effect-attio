@@ -9,6 +9,7 @@ export interface AttributeDef {
 	output: Schema.Top
 	value?: Schema.Top
 	readonly referenceTarget?: string
+	readonly queryValueType?: "date" | "timestamp"
 }
 
 type WithReferenceTarget<
@@ -194,43 +195,59 @@ export function makeAttribute<
 >(base: {
 	input: TInput
 	output: TOutput
+	queryValueType?: "date" | "timestamp"
 }): BaseAttributeVariations<TInput, TOutput>
 export function makeAttribute<
 	TInput extends Schema.Top,
 	TOutput extends Extendable,
 >(
-	base: { input: TInput; output: TOutput },
+	base: {
+		input: TInput
+		output: TOutput
+		queryValueType?: "date" | "timestamp"
+	},
 	options: { multiple: true },
 ): AttributeWithMultiple<TInput, TOutput>
 export function makeAttribute<
 	TInput extends Schema.Top,
 	TOutput extends Extendable,
 >(
-	base: { input: TInput; output: TOutput },
+	base: {
+		input: TInput
+		output: TOutput
+		queryValueType?: "date" | "timestamp"
+	},
 	options?: { multiple?: boolean },
 ):
 	| BaseAttributeVariations<TInput, TOutput>
 	| AttributeWithMultiple<TInput, TOutput> {
 	const enrichedOutput = enrichOutput(base.output)
+	const queryMetadata = base.queryValueType
+		? { queryValueType: base.queryValueType }
+		: {}
 
 	const result = Object.assign(
 		{
+			...queryMetadata,
 			input: Schema.optional(base.input),
 			output: ApiSingleValue(enrichedOutput),
 			value: enrichedOutput,
 		},
 		{
 			Required: {
+				...queryMetadata,
 				input: base.input,
 				output: ApiSingleValueRequired(enrichedOutput),
 				value: enrichedOutput,
 			},
 			ReadOnly: {
+				...queryMetadata,
 				input: Schema.Void,
 				output: ApiSingleValueRequired(enrichedOutput),
 				value: enrichedOutput,
 			},
 			ReadOnlyOptional: {
+				...queryMetadata,
 				input: Schema.Void,
 				output: ApiSingleValue(enrichedOutput),
 				value: enrichedOutput,
@@ -242,22 +259,26 @@ export function makeAttribute<
 		return Object.assign(result, {
 			Multiple: Object.assign(
 				{
+					...queryMetadata,
 					input: Schema.optional(Schema.Array(base.input)),
 					output: Schema.Array(enrichedOutput),
 					value: enrichedOutput,
 				},
 				{
 					Required: {
+						...queryMetadata,
 						input: Schema.Array(base.input),
 						output: Schema.Array(enrichedOutput).check(Schema.isMinLength(1)),
 						value: enrichedOutput,
 					},
 					ReadOnly: {
+						...queryMetadata,
 						input: Schema.Void,
 						output: Schema.Array(enrichedOutput).check(Schema.isMinLength(1)),
 						value: enrichedOutput,
 					},
 					ReadOnlyOptional: {
+						...queryMetadata,
 						input: Schema.Void,
 						output: Schema.Array(enrichedOutput),
 						value: enrichedOutput,

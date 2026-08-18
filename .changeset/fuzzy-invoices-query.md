@@ -6,6 +6,8 @@ Add typed native query parameters and type-safe `findMany` and `findFirst` query
 
 Return `Option` from `findFirst` to represent a missing record or list entry.
 
+Accept Effect `DateTime` values in date and timestamp query-builder comparisons.
+
 Native filter and sort paths validate relationship transitions, final attributes, constraints, and structured sort fields from the configured object graph.
 
 List configurations now declare their parent object and attributes. Query builders support typed record-reference traversal through `.attributes` and expose list parents as a separate callback argument.

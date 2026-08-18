@@ -126,8 +126,7 @@ const findInvoices = attio.invoices.findMany({
 })
 ```
 
-Record references expose the related object under `.attributes`. 
-
+Record references expose the related object under `.attributes`.
 
 For lists, the second callback argument contains the parent object's attributes. The builder converts these accesses to Attio paths.
 
@@ -150,7 +149,7 @@ const findInvoice = attio.invoices.findFirst({
 })
 ```
 
-Available comparison functions are `eq`, `inArray`, `isNotEmpty`, `contains`, `startsWith`, `endsWith`, `lt`, `lte`, `gt`, and `gte`. Filters can be combined with `and` and `or`. Use `not` to negate one comparison.
+Available comparison functions are `eq`, `inArray`, `isNotEmpty`, `contains`, `startsWith`, `endsWith`, `lt`, `lte`, `gt`, and `gte`. Filters can be combined with `and` and `or`. Use `not` to negate one comparison. Date and timestamp comparisons accept ISO strings or Effect `DateTime` values. The builder formats `DateTime` values as `YYYY-MM-DD` for dates and UTC ISO strings for timestamps.
 
 The native `list({ filter, sorts })` API is also type-safe. Use it when direct access to Attio's JSON query format is preferred:
 

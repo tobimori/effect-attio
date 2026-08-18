@@ -1,3 +1,4 @@
+import * as DateTime from "effect/DateTime"
 import type * as Schema from "effect/Schema"
 import type { AttributeDef } from "../schemas/attribute-builder.js"
 
@@ -30,6 +31,7 @@ interface ColumnDescriptor {
 	readonly field?: string
 	readonly resource?: string
 	readonly referenceTarget?: string
+	readonly queryValueType?: "date" | "timestamp"
 	readonly path?: ReadonlyArray<readonly [resource: string, attribute: string]>
 }
 
@@ -58,6 +60,10 @@ interface QueryOrder {
 
 type AnyColumn = QueryColumn<any, any>
 type ColumnValue<Column extends AnyColumn> = Column[typeof ColumnType]["value"]
+type ColumnNativeValue<Column extends AnyColumn> = Exclude<
+	ColumnValue<Column>,
+	DateTime.DateTime
+>
 type ColumnOperators<Column extends AnyColumn> =
 	Column[typeof ColumnType]["operators"]
 type Supports<Column extends AnyColumn, Operator extends ComparisonOperator> =
@@ -100,8 +106,9 @@ type StringColumn<Operators extends ComparisonOperator = StringOperator> =
 	QueryColumn<string, Operators>
 type NumberColumn = QueryColumn<number, RangeOperator>
 type CurrencyColumn = QueryColumn<number | string, RangeOperator>
-type DateColumn = QueryColumn<string, RangeOperator>
-type DateRangeColumn = QueryColumn<string, Exclude<RangeOperator, "eq">>
+type DateValue = string | DateTime.DateTime
+type DateColumn = QueryColumn<DateValue, RangeOperator>
+type DateRangeColumn = QueryColumn<DateValue, Exclude<RangeOperator, "eq">>
 type BooleanColumn = QueryColumn<boolean, "eq">
 
 type TextQueryAttribute = StringColumn<TextOperator> & {
@@ -392,10 +399,10 @@ type NativeOperatorValue<
 	Column extends AnyColumn,
 	Operator extends ComparisonOperator,
 > = Operator extends "in"
-	? ReadonlyArray<ColumnValue<Column>>
+	? ReadonlyArray<ColumnNativeValue<Column>>
 	: Operator extends "notEmpty"
 		? true
-		: ColumnValue<Column>
+		: ColumnNativeValue<Column>
 
 type NativeComparison<Column extends AnyColumn> = {
 	readonly [
@@ -404,7 +411,7 @@ type NativeComparison<Column extends AnyColumn> = {
 }
 
 type NativeColumnFilter<Column extends AnyColumn> =
-	| ColumnValue<Column>
+	| ColumnNativeValue<Column>
 	| NativeComparison<Column>
 
 type QueryAttributeField<Attribute> = {
@@ -655,7 +662,17 @@ const column = (
 				})
 			}
 			if (typeof property === "string") {
-				return column({ ...descriptor, field: property }, context)
+				return column(
+					{
+						...descriptor,
+						field: property,
+						queryValueType:
+							property === "interacted_at" || property === "active_from"
+								? "timestamp"
+								: descriptor.queryValueType,
+					},
+					context,
+				)
 			}
 		},
 	})
@@ -686,6 +703,7 @@ const fields = <
 						attribute: property,
 						resource: context.resource,
 						referenceTarget: context.fields?.[property]?.referenceTarget,
+						queryValueType: context.fields?.[property]?.queryValueType,
 						path:
 							context.pathPrefix && context.resource
 								? [...context.pathPrefix, [context.resource, property] as const]
@@ -701,14 +719,23 @@ const comparison = <Column extends AnyColumn>(
 	column: Column,
 	operator: ComparisonNode["operator"],
 	value: unknown,
-): QueryComparisonExpression => ({
-	[ExpressionType]: {
-		_tag: "Comparison",
-		column: column[ColumnType].descriptor,
-		operator,
-		value,
-	},
-})
+): QueryComparisonExpression => {
+	const descriptor = column[ColumnType].descriptor
+	const normalizedValue = DateTime.isDateTime(value)
+		? descriptor.queryValueType === "date"
+			? DateTime.formatIsoDate(value)
+			: DateTime.formatIso(value)
+		: value
+
+	return {
+		[ExpressionType]: {
+			_tag: "Comparison",
+			column: descriptor,
+			operator,
+			value: normalizedValue,
+		},
+	}
+}
 
 const queryOperators = {
 	eq: <Column extends AnyColumn>(

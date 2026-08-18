@@ -31,7 +31,8 @@
 	"scripts": {
 		"clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
 		"build": "pnpm run clean && tsc",
-		"test": "pnpm run build && tstyche --target '>=5.9'",
+		"test": "pnpm run build && pnpm run test:unit && pnpm run test:types",
+		"test:unit": "tsc --project tsconfig.test.json && vitest run",
 		"test:types": "tstyche --target '>=5.9'",
 		"format": "oxfmt --write",
 		"lint": "oxlint --fix --deny-warnings",
@@ -49,7 +50,8 @@
 		"oxfmt": "^0.63.0",
 		"oxlint": "^1.78.0",
 		"tstyche": "^7.2.2",
-		"typescript": "^5.9.2"
+		"typescript": "^5.9.2",
+		"vitest": "^4.1.10"
 	},
 	"peerDependencies": {
 		"effect": "^4.0.0-rc.110"

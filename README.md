@@ -15,7 +15,7 @@ pnpm add effect-attio effect
 ## Quick Start
 
 ```typescript
-import { Effect, Layer, Redacted } from "effect"
+import { Effect, Layer, Redacted, Stream } from "effect"
 import { FetchHttpClient } from "effect/unstable/http"
 import { AttioClient, Attributes } from "effect-attio"
 
@@ -148,6 +148,26 @@ const findInvoice = attio.invoices.findFirst({
 	where: (invoice, { eq }) => eq(invoice.invoice_number, "INV-2024-001"),
 })
 ```
+
+Use `findManyStream` to lazily read all matching results with automatic pagination. Use `Stream.take` to limit the total number of emitted results. The stream starts at `offset` when it is specified.
+
+```typescript
+const invoices = attio.invoices
+	.findManyStream({
+		where: (invoice, { gte }) => gte(invoice.amount, 1000),
+	})
+	.pipe(Stream.take(100))
+```
+
+Use `listStream` for the same behavior with Attio's native query format:
+
+```typescript
+const invoices = attio.invoices.listStream({
+	filter: { amount: { $gte: 1000 } },
+})
+```
+
+Both stream methods use Attio's documented default page size of 500 items. This is an SDK page size, not a documented Attio maximum. The methods do not accept `limit` because `Stream.take` controls the total result count.
 
 Available comparison functions are `eq`, `inArray`, `isNotEmpty`, `contains`, `startsWith`, `endsWith`, `lt`, `lte`, `gt`, and `gte`. Filters can be combined with `and` and `or`. Use `not` to negate one comparison. Date and timestamp comparisons accept ISO strings or Effect `DateTime` values. The builder formats `DateTime` values as `YYYY-MM-DD` for dates and UTC ISO strings for timestamps.
 

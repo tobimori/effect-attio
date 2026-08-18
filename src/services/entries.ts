@@ -3,6 +3,7 @@ import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import type * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
+import type * as Stream from "effect/Stream"
 import * as HttpClientRequest from "effect/unstable/http/HttpClientRequest"
 import * as HttpClientResponse from "effect/unstable/http/HttpClientResponse"
 import {
@@ -45,6 +46,21 @@ type FirstEntry<TInput extends Schema.Top, TOutput extends Schema.Constraint> =
 	>
 		? Effect.Effect<Option.Option<Entry>, Error, Requirements>
 		: never
+
+type EntryStream<TInput extends Schema.Top, TOutput extends Schema.Constraint> =
+	ReturnType<
+		typeof AttioEntries.Service.list<TInput, TOutput>
+	> extends Effect.Effect<
+		ReadonlyArray<infer Entry>,
+		infer Error,
+		infer Requirements
+	>
+		? Stream.Stream<Entry, Error, Requirements>
+		: never
+
+type WithoutLimit<Options> = Options extends unknown
+	? Omit<Options, "limit">
+	: never
 
 const makeAttioEntries = Effect.gen(function* () {
 	const http = yield* AttioHttpClient
@@ -438,11 +454,24 @@ export type GenericAttioEntries<
 			Extract<TObjectName, keyof TObjects & string>
 		>,
 	) => ReturnType<typeof AttioEntries.Service.list<TInput, TOutput>>
+	findManyStream: (
+		options?: Omit<
+			QueryBuilderOptions<
+				TFields,
+				TObjects,
+				Extract<TObjectName, keyof TObjects & string>
+			>,
+			"limit"
+		>,
+	) => EntryStream<TInput, TOutput>
 	findFirst: (
-		options?: QueryBuilderOptions<
-			TFields,
-			TObjects,
-			Extract<TObjectName, keyof TObjects & string>
+		options?: Omit<
+			QueryBuilderOptions<
+				TFields,
+				TObjects,
+				Extract<TObjectName, keyof TObjects & string>
+			>,
+			"limit"
 		>,
 	) => FirstEntry<TInput, TOutput>
 
@@ -454,6 +483,16 @@ export type GenericAttioEntries<
 			Extract<TObjectName, keyof TObjects & string>
 		>,
 	) => ReturnType<typeof AttioEntries.Service.list<TInput, TOutput>>
+	listStream: (
+		params?: WithoutLimit<
+			NativeQueryParams<
+				TFields,
+				TObjects,
+				TListName,
+				Extract<TObjectName, keyof TObjects & string>
+			>
+		>,
+	) => EntryStream<TInput, TOutput>
 	assert: (
 		data: Omit<
 			Parameters<typeof AttioEntries.Service.assert<TInput, TOutput>>[2],

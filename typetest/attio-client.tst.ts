@@ -1,4 +1,4 @@
-import { Effect, Redacted } from "effect"
+import { Effect, Redacted, Stream } from "effect"
 import type { Config, Layer } from "effect"
 import type * as DateTime from "effect/DateTime"
 import type * as Option from "effect/Option"
@@ -290,11 +290,28 @@ describe("AttioClient", () => {
 		const invoice = client.invoices.findFirst({
 			where: (invoice, { eq }) => eq(invoice.invoice_number, "INV-001"),
 		})
+		expect(client.invoices.findFirst).type.not.toBeCallableWith({ limit: 50 })
 
 		type Invoice = Effect.Success<typeof invoices>[number]
 		expect(invoice).type.toBe<
 			Effect.Effect<Option.Option<Invoice>, Effect.Error<typeof invoices>>
 		>()
+
+		const invoiceStream = client.invoices.findManyStream({
+			where: (invoice, { gte }) => gte(invoice.amount, 100),
+			offset: 10,
+		})
+		expect(invoiceStream).type.toBe<
+			Stream.Stream<Invoice, Effect.Error<typeof invoices>>
+		>()
+		expect(client.invoices.findManyStream).type.not.toBeCallableWith({
+			limit: 50,
+		})
+		expect(client.invoices.listStream).type.toBeCallableWith({
+			filter: { amount: { $gte: 100 } },
+			offset: 10,
+		})
+		expect(client.invoices.listStream).type.not.toBeCallableWith({ limit: 50 })
 	})
 
 	it("supports structured attribute query fields", () => {
@@ -488,6 +505,30 @@ describe("AttioClient", () => {
 		expect(entries).type.toBe<
 			ReturnType<typeof client.lists.opportunities.list>
 		>()
+		expect(client.lists.opportunities.findFirst).type.not.toBeCallableWith({
+			limit: 50,
+		})
+
+		type Entry = Effect.Success<typeof entries>[number]
+		const entryStream = client.lists.opportunities.findManyStream({
+			where: (opportunity, parent, { and, contains }) =>
+				and(
+					contains(opportunity.title, "Enterprise"),
+					contains(parent.name, "Attio"),
+				),
+		})
+		expect(entryStream).type.toBe<
+			Stream.Stream<Entry, Effect.Error<typeof entries>>
+		>()
+		expect(client.lists.opportunities.findManyStream).type.not.toBeCallableWith(
+			{ limit: 50 },
+		)
+		expect(client.lists.opportunities.listStream).type.toBeCallableWith({
+			filter_view_id: "550e8400-e29b-41d4-a716-446655440000",
+		})
+		expect(client.lists.opportunities.listStream).type.not.toBeCallableWith({
+			limit: 50,
+		})
 	})
 
 	it("lists object views with cursor pagination", () => {

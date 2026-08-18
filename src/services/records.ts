@@ -4,6 +4,7 @@ import * as Layer from "effect/Layer"
 import type * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
 import * as Struct from "effect/Struct"
+import type * as Stream from "effect/Stream"
 import * as HttpClientRequest from "effect/unstable/http/HttpClientRequest"
 import * as HttpClientResponse from "effect/unstable/http/HttpClientResponse"
 import {
@@ -47,6 +48,24 @@ type FirstRecord<TInput extends Schema.Top, TOutput extends Schema.Constraint> =
 	>
 		? Effect.Effect<Option.Option<Record>, Error, Requirements>
 		: never
+
+type RecordStream<
+	TInput extends Schema.Top,
+	TOutput extends Schema.Constraint,
+> =
+	ReturnType<
+		typeof AttioRecords.Service.list<TInput, TOutput>
+	> extends Effect.Effect<
+		ReadonlyArray<infer Record>,
+		infer Error,
+		infer Requirements
+	>
+		? Stream.Stream<Record, Error, Requirements>
+		: never
+
+type WithoutLimit<Options> = Options extends unknown
+	? Omit<Options, "limit">
+	: never
 
 const makeAttioRecords = Effect.gen(function* () {
 	const http = yield* AttioHttpClient
@@ -465,13 +484,19 @@ export type GenericAttioRecords<
 	findMany: (
 		options?: QueryBuilderOptions<TFields, TObjects>,
 	) => ReturnType<typeof AttioRecords.Service.list<TInput, TOutput>>
+	findManyStream: (
+		options?: Omit<QueryBuilderOptions<TFields, TObjects>, "limit">,
+	) => RecordStream<TInput, TOutput>
 	findFirst: (
-		options?: QueryBuilderOptions<TFields, TObjects>,
+		options?: Omit<QueryBuilderOptions<TFields, TObjects>, "limit">,
 	) => FirstRecord<TInput, TOutput>
 
 	list: (
 		params?: NativeQueryParams<TFields, TObjects, TObjectName>,
 	) => ReturnType<typeof AttioRecords.Service.list<TInput, TOutput>>
+	listStream: (
+		params?: WithoutLimit<NativeQueryParams<TFields, TObjects, TObjectName>>,
+	) => RecordStream<TInput, TOutput>
 
 	assert: (
 		matchingAttribute: Extract<keyof TFields, string>,

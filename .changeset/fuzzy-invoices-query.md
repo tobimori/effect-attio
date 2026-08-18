@@ -4,6 +4,8 @@
 
 Add typed native query parameters and type-safe `findMany` and `findFirst` query builders for configured records and list entries.
 
+Add lazy `findManyStream` and `listStream` methods that automatically paginate configured records and list entries with Effect `Stream`.
+
 Return `Option` from `findFirst` to represent a missing record or list entry.
 
 Accept Effect `DateTime` values in date and timestamp query-builder comparisons.

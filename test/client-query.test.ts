@@ -1,5 +1,5 @@
 import { describe, expect, it } from "@effect/vitest"
-import { Effect, Layer, Option, Redacted } from "effect"
+import { Effect, Layer, Option, Redacted, Stream } from "effect"
 import {
 	HttpClient,
 	HttpClientRequest,
@@ -270,6 +270,105 @@ describe("configured client queries", () => {
 					offset: 0,
 				})
 				expect(Option.isNone(result)).toBe(true)
+			}),
+			http.layer,
+		)
+	})
+
+	it.effect("automatically paginates a builder record stream", () => {
+		const fullPage = {
+			data: Array.from({ length: 500 }, () => recordResponse.data[0]),
+		}
+		const http = makeHttpHarness([fullPage, recordResponse])
+
+		return provideClient(
+			Effect.gen(function* () {
+				const attio = yield* TestAttioClient
+				const records = attio.invoices.findManyStream({
+					where: (invoice, { startsWith }) =>
+						startsWith(invoice.invoice_number, "INV-"),
+					offset: 7,
+				})
+
+				expect(http.requests).toHaveLength(0)
+				const result = yield* Stream.runCollect(records)
+
+				expect(result).toHaveLength(501)
+				expect(http.requests).toHaveLength(2)
+				expect(requestBody(http.requests[0]!)).toEqual({
+					filter: { invoice_number: { $starts_with: "INV-" } },
+					limit: 500,
+					offset: 7,
+				})
+				expect(requestBody(http.requests[1]!)).toEqual({
+					filter: { invoice_number: { $starts_with: "INV-" } },
+					limit: 500,
+					offset: 507,
+				})
+			}),
+			http.layer,
+		)
+	})
+
+	it.effect("streams native record queries", () => {
+		const http = makeHttpHarness([emptyResponse])
+
+		return provideClient(
+			Effect.gen(function* () {
+				const attio = yield* TestAttioClient
+				yield* attio.invoices
+					.listStream({
+						filter: { invoice_number: { $starts_with: "INV-" } },
+						offset: 3,
+					})
+					.pipe(Stream.runDrain)
+
+				expect(requestBody(http.requests[0]!)).toEqual({
+					filter: { invoice_number: { $starts_with: "INV-" } },
+					limit: 500,
+					offset: 3,
+				})
+			}),
+			http.layer,
+		)
+	})
+
+	it.effect("streams builder and native list queries", () => {
+		const viewId = "66666666-6666-4666-8666-666666666666"
+		const http = makeHttpHarness([emptyResponse, emptyResponse])
+
+		return provideClient(
+			Effect.gen(function* () {
+				const attio = yield* TestAttioClient
+				yield* attio.lists.opportunities
+					.findManyStream({
+						where: (_entry, parent, { contains }) =>
+							contains(parent.name, "Acme"),
+					})
+					.pipe(Stream.runDrain)
+				yield* attio.lists.opportunities
+					.listStream({ filter_view_id: viewId, offset: 2 })
+					.pipe(Stream.runDrain)
+
+				expect(http.requests[0]?.url).toBe(
+					"https://api.test/v2/lists/opportunities/entries/query",
+				)
+				expect(requestBody(http.requests[0]!)).toEqual({
+					filter: {
+						path: [
+							["opportunities", "parent_record"],
+							["companies", "name"],
+						],
+						constraints: { $contains: "Acme" },
+					},
+					limit: 500,
+					offset: 0,
+				})
+				expect(requestBody(http.requests[1]!)).toEqual({
+					filter_view_id: viewId,
+					limit: 500,
+					offset: 2,
+				})
 			}),
 			http.layer,
 		)

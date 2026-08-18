@@ -3,7 +3,9 @@ import * as Context from "effect/Context"
 import * as Effect from "effect/Effect"
 import * as Arr from "effect/Array"
 import * as Layer from "effect/Layer"
+import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
+import * as Stream from "effect/Stream"
 import type * as HttpClient from "effect/unstable/http/HttpClient"
 import {
 	type AttioClientSchemas,
@@ -32,6 +34,25 @@ import { AttioWebhooks } from "./services/webhooks.js"
 import { AttioWorkspaceMembers } from "./services/workspace-members.js"
 
 type EmptyRecord = Record<never, never>
+
+const STREAM_PAGE_SIZE = 500
+
+const paginateQuery = <A, E, R>(
+	initialOffset: number,
+	loadPage: (offset: number) => Effect.Effect<ReadonlyArray<A>, E, R>,
+) =>
+	Stream.paginate(
+		initialOffset,
+		Effect.fn("AttioClient.paginateQuery")(function* (offset) {
+			const items = yield* loadPage(offset)
+			return [
+				items,
+				items.length < STREAM_PAGE_SIZE
+					? Option.none()
+					: Option.some(offset + items.length),
+			] as const
+		}),
+	)
 
 type ConfiguredObjects<T extends AttioClientSchemas> =
 	T["objects"] extends Record<string, ObjectConfig> ? T["objects"] : EmptyRecord
@@ -174,6 +195,23 @@ export const AttioClient =
 														{ input, output },
 														compileQueryBuilderOptions(options, queryContext),
 													),
+												findManyStream: (options: any = {}) => {
+													const query = compileQueryBuilderOptions(
+														options,
+														queryContext,
+													)
+													return paginateQuery(query.offset ?? 0, (offset) =>
+														entries.list(
+															listName,
+															{ input, output },
+															{
+																...query,
+																limit: STREAM_PAGE_SIZE,
+																offset,
+															},
+														),
+													)
+												},
 												findFirst: (options: any = {}) =>
 													Effect.map(
 														entries.list(
@@ -191,6 +229,18 @@ export const AttioClient =
 													),
 												list: (params?: any) =>
 													entries.list(listName, { input, output }, params),
+												listStream: (params: any = {}) =>
+													paginateQuery(params.offset ?? 0, (offset) =>
+														entries.list(
+															listName,
+															{ input, output },
+															{
+																...params,
+																limit: STREAM_PAGE_SIZE,
+																offset,
+															},
+														),
+													),
 												assert: (data: any) =>
 													entries.assert(listName, { input, output }, data),
 												create: (data: any) =>
@@ -264,6 +314,23 @@ export const AttioClient =
 													{ input, output },
 													compileQueryBuilderOptions(options, queryContext),
 												),
+											findManyStream: (options: any = {}) => {
+												const query = compileQueryBuilderOptions(
+													options,
+													queryContext,
+												)
+												return paginateQuery(query.offset ?? 0, (offset) =>
+													records.list(
+														resource,
+														{ input, output },
+														{
+															...query,
+															limit: STREAM_PAGE_SIZE,
+															offset,
+														},
+													),
+												)
+											},
 											findFirst: (options: any = {}) =>
 												Effect.map(
 													records.list(
@@ -281,6 +348,18 @@ export const AttioClient =
 												),
 											list: (params?: any) =>
 												records.list(resource, { input, output }, params),
+											listStream: (params: any = {}) =>
+												paginateQuery(params.offset ?? 0, (offset) =>
+													records.list(
+														resource,
+														{ input, output },
+														{
+															...params,
+															limit: STREAM_PAGE_SIZE,
+															offset,
+														},
+													),
+												),
 
 											assert: (matchingAttribute: string, data: any) =>
 												records.assert(

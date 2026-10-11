@@ -6,7 +6,7 @@ import * as Layer from "effect/Layer"
 import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
 import * as Stream from "effect/Stream"
-import type * as HttpClient from "effect/unstable/http/HttpClient"
+import type * as HttpClient from "effect/http/HttpClient"
 import {
 	type AttioClientSchemas,
 	type ListConfig,
@@ -453,8 +453,8 @@ export const AttioClient =
 				const layer = this.layer
 				return Layer.unwrap(
 					Effect.gen(function* () {
-						const apiKey = yield* Config.redacted("ATTIO_API_KEY")
-						const baseUrl = yield* Config.string("ATTIO_BASE_URL").pipe(
+						const apiKey = yield* Config.Redacted("ATTIO_API_KEY")
+						const baseUrl = yield* Config.String("ATTIO_BASE_URL").pipe(
 							Config.withDefault("https://api.attio.com"),
 						)
 

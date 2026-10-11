@@ -10,10 +10,10 @@ import * as Predicate from "effect/Predicate"
 import type * as Redacted from "effect/Redacted"
 import * as Schedule from "effect/Schedule"
 import * as Schema from "effect/Schema"
-import * as HttpClient from "effect/unstable/http/HttpClient"
-import * as HttpClientError from "effect/unstable/http/HttpClientError"
-import * as HttpClientRequest from "effect/unstable/http/HttpClientRequest"
-import type * as HttpClientResponse from "effect/unstable/http/HttpClientResponse"
+import * as HttpClient from "effect/http/HttpClient"
+import * as HttpClientError from "effect/http/HttpClientError"
+import * as HttpClientRequest from "effect/http/HttpClientRequest"
+import type * as HttpClientResponse from "effect/http/HttpClientResponse"
 import {
 	AttioRateLimitErrorTransform,
 	AttioUnauthorizedErrorTransform,
@@ -122,8 +122,8 @@ export class AttioHttpClient extends Context.Service<
 
 	static readonly layerConfig = Layer.unwrap(
 		Effect.gen(function* () {
-			const apiKey = yield* Config.redacted("ATTIO_API_KEY")
-			const baseUrl = yield* Config.string("ATTIO_BASE_URL").pipe(
+			const apiKey = yield* Config.Redacted("ATTIO_API_KEY")
+			const baseUrl = yield* Config.String("ATTIO_BASE_URL").pipe(
 				Config.withDefault("https://api.attio.com"),
 			)
 			return AttioHttpClient.layer({ apiKey, baseUrl })

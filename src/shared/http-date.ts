@@ -10,7 +10,7 @@ import * as SchemaTransformation from "effect/SchemaTransformation"
 export const HttpDate = Schema.String.pipe(
 	Schema.decodeTo(
 		Schema.DateTimeUtc,
-		SchemaTransformation.transformOrFail({
+		SchemaTransformation.transformEffect({
 			decode: (value, options) =>
 				DateTime.make(value).pipe(
 					Option.match({

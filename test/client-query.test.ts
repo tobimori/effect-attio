@@ -1,10 +1,6 @@
 import { describe, expect, it } from "@effect/vitest"
 import { DateTime, Effect, Layer, Option, Redacted, Stream } from "effect"
-import {
-	HttpClient,
-	HttpClientRequest,
-	HttpClientResponse,
-} from "effect/unstable/http"
+import { HttpClient, HttpClientRequest, HttpClientResponse } from "effect/http"
 import { AttioClient } from "../src/client.js"
 import * as Attributes from "../src/schemas/attributes.js"
 

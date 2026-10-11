@@ -16,7 +16,7 @@ pnpm add effect-attio effect
 
 ```typescript
 import { Effect, Layer, Redacted, Stream } from "effect"
-import { FetchHttpClient } from "effect/unstable/http"
+import { FetchHttpClient } from "effect/http"
 import { AttioClient, Attributes } from "effect-attio"
 
 // define your attio client with your custom objects and attributes

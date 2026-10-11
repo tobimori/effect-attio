@@ -1,7 +1,7 @@
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 import * as SchemaTransformation from "effect/SchemaTransformation"
-import * as HttpClientError from "effect/unstable/http/HttpClientError"
+import * as HttpClientError from "effect/http/HttpClientError"
 import {
 	AttioConflictError,
 	AttioFilterError,

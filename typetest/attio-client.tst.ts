@@ -3,7 +3,7 @@ import type { Config, Layer } from "effect"
 import type * as DateTime from "effect/DateTime"
 import type * as Option from "effect/Option"
 import type * as Schema from "effect/Schema"
-import type { HttpClient } from "effect/unstable/http"
+import type { HttpClient } from "effect/http"
 import { AttioClient, Attributes } from "effect-attio"
 import { describe, expect, it } from "tstyche"
 

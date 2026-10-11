@@ -99,7 +99,7 @@ export const ApiSingleValue = <S extends Schema.Top>(itemSchema: S) =>
  */
 export const ApiSingleValueRequired = <S extends Schema.Top>(itemSchema: S) =>
 	Schema.Array(itemSchema)
-		.check(Schema.isLengthBetween(1, 1))
+		.check(Schema.isMinLength(1), Schema.isMaxLength(1))
 		.pipe(
 			Schema.decodeTo(
 				Schema.toType(itemSchema),

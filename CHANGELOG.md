@@ -1,5 +1,11 @@
 # effect-attio
 
+## 1.2.0
+
+### Minor Changes
+
+- efbbb67: Require Effect 4.0 stable. Imports use the stable `effect/http` paths, which do not exist in the 4.0 release candidates, so the peer dependency is now `effect@^4.0.0`.
+
 ## 1.1.0
 
 ### Minor Changes

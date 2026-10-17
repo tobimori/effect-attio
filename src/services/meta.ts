@@ -21,6 +21,7 @@ export const TokenInfo = Schema.Struct({
 	workspace_name: Schema.String,
 	workspace_slug: Schema.String,
 	workspace_logo_url: Schema.NullOr(Schema.String),
+	token_level: Schema.Literals(["workspace", "user"]),
 })
 
 export const InactiveToken = Schema.Struct({

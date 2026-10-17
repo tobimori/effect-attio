@@ -25,7 +25,6 @@ describe("Enabled standard references", () => {
 		)
 		expect(client.companies.create).type.toBeCallableWith({
 			associated_deals: [recordId],
-			associated_users: [recordId],
 		})
 		expect(client.people.create).type.toBeCallableWith({
 			associated_deals: [recordId],

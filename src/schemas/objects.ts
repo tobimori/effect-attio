@@ -43,7 +43,6 @@ export const companies = {
 	strongest_connection_strength: Attributes.Select.ReadOnlyOptional,
 	strongest_connection_user: Attributes.ActorReference.ReadOnlyOptional,
 	associated_deals: Attributes.DealRecordReference.Multiple,
-	associated_users: Attributes.UserRecordReference.Multiple,
 	associated_workspaces: Attributes.WorkspaceRecordReference.Multiple,
 }
 
@@ -99,7 +98,7 @@ export const people = {
  */
 export const deals = {
 	name: Attributes.Text,
-	state: Attributes.Status,
+	stage: Attributes.Status,
 	owner: Attributes.ActorReference,
 	value: Attributes.Currency,
 	associated_people: Attributes.PersonRecordReference.Multiple,

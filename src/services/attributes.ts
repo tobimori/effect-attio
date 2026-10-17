@@ -351,7 +351,7 @@ const makeAttioAttributes = Effect.gen(function* () {
 			) {
 				return yield* send(
 					HttpClientRequest.patch(
-						`${path(target, identifier)}/${attribute}/options/${option}`,
+						`${path(target, identifier)}/${attribute}/options/${encodeURIComponent(option)}`,
 					),
 					SelectOptionUpdate,
 					SelectOption,
@@ -412,7 +412,7 @@ const makeAttioAttributes = Effect.gen(function* () {
 		) {
 			return yield* send(
 				HttpClientRequest.patch(
-					`${path(target, identifier)}/${attribute}/statuses/${status}`,
+					`${path(target, identifier)}/${attribute}/statuses/${encodeURIComponent(status)}`,
 				),
 				StatusUpdate,
 				Status,

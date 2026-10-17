@@ -7,6 +7,7 @@ import * as HttpClientResponse from "effect/http/HttpClientResponse"
 import {
 	AttioConflictErrorTransform,
 	AttioNotFoundErrorTransform,
+	AttioSystemEditErrorTransform,
 	AttioValidationErrorTransform,
 	mapAttioErrors,
 } from "../error-transforms.js"
@@ -134,6 +135,24 @@ const makeAttioObjects = Effect.gen(function* () {
 					AttioConflictErrorTransform,
 				),
 			)
+		}),
+
+		/**
+		 * Deletes a custom object by its object_id or slug, with all of its
+		 * records. You cannot delete system objects, such as people and
+		 * companies. This cannot be undone.
+		 *
+		 * Required scopes: `object_configuration:read-write`, `record_permission:read-write`
+		 */
+		delete: Effect.fn("AttioObjects.delete")(function* (object: string) {
+			yield* http
+				.del(`/v2/objects/${object}`)
+				.pipe(
+					mapAttioErrors(
+						AttioNotFoundErrorTransform,
+						AttioSystemEditErrorTransform,
+					),
+				)
 		}),
 
 		/**

@@ -72,6 +72,7 @@ const makeAttioNotes = Effect.gen(function* () {
 					HttpClientResponse.schemaBodyJson(DataStruct(Schema.Array(Note))),
 				),
 				Effect.map((result) => result.data),
+				mapAttioErrors(AttioNotFoundErrorTransform),
 			)
 		}),
 
@@ -89,7 +90,10 @@ const makeAttioNotes = Effect.gen(function* () {
 				Effect.flatMap(http.execute),
 				Effect.flatMap(HttpClientResponse.schemaBodyJson(DataStruct(Note))),
 				Effect.map((result) => result.data),
-				mapAttioErrors(AttioValidationErrorTransform),
+				mapAttioErrors(
+					AttioValidationErrorTransform,
+					AttioNotFoundErrorTransform,
+				),
 			)
 		}),
 

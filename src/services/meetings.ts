@@ -5,7 +5,6 @@ import * as Schema from "effect/Schema"
 import * as HttpClientRequest from "effect/http/HttpClientRequest"
 import * as HttpClientResponse from "effect/http/HttpClientResponse"
 import {
-	AttioMissingValueErrorTransform,
 	AttioNotFoundErrorTransform,
 	AttioSystemEditErrorTransform,
 	AttioValidationErrorTransform,
@@ -203,7 +202,6 @@ const makeAttioMeetings = Effect.gen(function* () {
 			Effect.map((response) => response.data),
 			mapAttioErrors(
 				AttioValidationErrorTransform,
-				AttioMissingValueErrorTransform,
 				AttioNotFoundErrorTransform,
 			),
 		)
@@ -286,8 +284,8 @@ const makeAttioMeetings = Effect.gen(function* () {
 				.del(`/v2/meetings/${meetingId}`)
 				.pipe(
 					mapAttioErrors(
-						AttioNotFoundErrorTransform,
 						AttioSystemEditErrorTransform,
+						AttioNotFoundErrorTransform,
 					),
 				)
 		}),

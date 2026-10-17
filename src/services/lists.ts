@@ -116,6 +116,7 @@ const makeAttioLists = Effect.gen(function* () {
 				Effect.map((result) => result.data),
 				mapAttioErrors(
 					AttioValidationErrorTransform,
+					AttioNotFoundErrorTransform,
 					AttioConflictErrorTransform,
 				),
 			)
@@ -159,8 +160,8 @@ const makeAttioLists = Effect.gen(function* () {
 				Effect.flatMap(HttpClientResponse.schemaBodyJson(DataStruct(List))),
 				Effect.map((result) => result.data),
 				mapAttioErrors(
-					AttioNotFoundErrorTransform,
 					AttioValidationErrorTransform,
+					AttioNotFoundErrorTransform,
 					AttioConflictErrorTransform,
 				),
 			)

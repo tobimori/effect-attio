@@ -5,6 +5,7 @@ import * as Schema from "effect/Schema"
 import * as HttpClientRequest from "effect/http/HttpClientRequest"
 import * as HttpClientResponse from "effect/http/HttpClientResponse"
 import {
+	AttioFilterErrorTransform,
 	AttioValidationErrorTransform,
 	mapAttioErrors,
 } from "../error-transforms.js"
@@ -30,7 +31,10 @@ const makeAttioSql = Effect.gen(function* () {
 					HttpClientResponse.schemaBodyJson(DataStruct(SqlResult)),
 				),
 				Effect.map((response) => response.data.rows),
-				mapAttioErrors(AttioValidationErrorTransform),
+				mapAttioErrors(
+					AttioValidationErrorTransform,
+					AttioFilterErrorTransform,
+				),
 			)
 		}),
 	}

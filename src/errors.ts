@@ -1,6 +1,6 @@
 import * as Schema from "effect/Schema"
 
-// 404 Errors
+// Not found (code: "not_found" or "value_not_found", with a 404 or a 400)
 export class AttioNotFoundError extends Schema.TaggedError<AttioNotFoundError>()(
 	"AttioNotFoundError",
 	{
@@ -23,15 +23,11 @@ export class AttioValidationError extends Schema.TaggedError<AttioValidationErro
 	},
 ) {}
 
-// 400 Errors - Missing Value (covers both missing_value and value_not_found codes)
+// 400 Errors - Missing Value (code: "missing_value")
 export class AttioMissingValueError extends Schema.TaggedError<AttioMissingValueError>()(
 	"AttioMissingValueError",
 	{
 		message: Schema.String,
-		code: Schema.Union([
-			Schema.Literal("missing_value"),
-			Schema.Literal("value_not_found"),
-		]),
 	},
 ) {}
 
@@ -80,7 +76,27 @@ export class AttioConflictError extends Schema.TaggedError<AttioConflictError>()
 	"AttioConflictError",
 	{
 		message: Schema.String,
-		code: Schema.String,
+		code: Schema.Literals(["slug_conflict", "concurrent_write_conflict"]),
+	},
+) {}
+
+// 400 Errors - other invalid requests, for example a limit or a merge in
+// progress (merge_in_progress can also come with a 404)
+export class AttioInvalidRequestError extends Schema.TaggedError<AttioInvalidRequestError>()(
+	"AttioInvalidRequestError",
+	{
+		message: Schema.String,
+		code: Schema.Literals([
+			"duplicate_values",
+			"limit_reached",
+			"merge_in_progress",
+			"particle_gate_violation",
+			"formula_edit_unauthorized",
+			"multiple_values_for_single_value_attribute",
+			"self_merge",
+			"standard_object_disabled",
+			"quota_exceeded",
+		]),
 	},
 ) {}
 
@@ -101,7 +117,15 @@ export class AttioRateLimitError extends Schema.TaggedError<AttioRateLimitError>
 	},
 ) {}
 
-// 403 Errors
+// 402 Errors - the workspace plan does not include the feature
+export class AttioPaymentRequiredError extends Schema.TaggedError<AttioPaymentRequiredError>()(
+	"AttioPaymentRequiredError",
+	{
+		message: Schema.String,
+	},
+) {}
+
+// 403 Errors - for example a missing scope ("unauthorized") or "billing_error"
 export class AttioForbiddenError extends Schema.TaggedError<AttioForbiddenError>()(
 	"AttioForbiddenError",
 	{
@@ -120,6 +144,8 @@ export type AttioErrors =
 	| AttioSystemEditError
 	| AttioUniquenessConflictError
 	| AttioConflictError
+	| AttioInvalidRequestError
 	| AttioUnauthorizedError
 	| AttioRateLimitError
+	| AttioPaymentRequiredError
 	| AttioForbiddenError

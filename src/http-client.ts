@@ -15,13 +15,23 @@ import * as HttpClientError from "effect/http/HttpClientError"
 import * as HttpClientRequest from "effect/http/HttpClientRequest"
 import type * as HttpClientResponse from "effect/http/HttpClientResponse"
 import {
+	AttioForbiddenErrorTransform,
+	AttioPaymentRequiredErrorTransform,
 	AttioRateLimitErrorTransform,
 	AttioUnauthorizedErrorTransform,
 } from "./error-transforms.js"
-import type { AttioRateLimitError, AttioUnauthorizedError } from "./errors.js"
+import type {
+	AttioForbiddenError,
+	AttioPaymentRequiredError,
+	AttioRateLimitError,
+	AttioUnauthorizedError,
+} from "./errors.js"
 
+// errors that any endpoint can return
 const GlobalErrors = Schema.Union([
 	AttioUnauthorizedErrorTransform,
+	AttioPaymentRequiredErrorTransform,
+	AttioForbiddenErrorTransform,
 	AttioRateLimitErrorTransform,
 ])
 
@@ -89,6 +99,8 @@ const makeAttioHttpClient = Effect.fn("AttioHttpClient.make")(function* (
 				Schedule.identity<
 					| HttpClientError.HttpClientError
 					| AttioUnauthorizedError
+					| AttioPaymentRequiredError
+					| AttioForbiddenError
 					| AttioRateLimitError
 				>().pipe(
 					Schedule.addDelay(({ input: error }) =>

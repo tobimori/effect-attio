@@ -336,6 +336,7 @@ const makeAttioAttributes = Effect.gen(function* () {
 					mapAttioErrors(
 						AttioValidationErrorTransform,
 						AttioNotFoundErrorTransform,
+						AttioConflictErrorTransform,
 					),
 				)
 			},
@@ -360,6 +361,7 @@ const makeAttioAttributes = Effect.gen(function* () {
 					mapAttioErrors(
 						AttioValidationErrorTransform,
 						AttioNotFoundErrorTransform,
+						AttioConflictErrorTransform,
 					),
 				)
 			},
@@ -399,6 +401,7 @@ const makeAttioAttributes = Effect.gen(function* () {
 				mapAttioErrors(
 					AttioValidationErrorTransform,
 					AttioNotFoundErrorTransform,
+					AttioConflictErrorTransform,
 				),
 			)
 		}),
@@ -421,6 +424,7 @@ const makeAttioAttributes = Effect.gen(function* () {
 				mapAttioErrors(
 					AttioValidationErrorTransform,
 					AttioNotFoundErrorTransform,
+					AttioConflictErrorTransform,
 				),
 			)
 		}),

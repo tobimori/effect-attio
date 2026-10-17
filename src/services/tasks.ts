@@ -5,6 +5,7 @@ import * as Schema from "effect/Schema"
 import * as HttpClientRequest from "effect/http/HttpClientRequest"
 import * as HttpClientResponse from "effect/http/HttpClientResponse"
 import {
+	AttioInvalidRequestErrorTransform,
 	AttioNotFoundErrorTransform,
 	AttioValidationErrorTransform,
 	mapAttioErrors,
@@ -106,7 +107,11 @@ const makeAttioTasks = Effect.gen(function* () {
 				Effect.flatMap(http.execute),
 				Effect.flatMap(HttpClientResponse.schemaBodyJson(DataStruct(Task))),
 				Effect.map((result) => result.data),
-				mapAttioErrors(AttioValidationErrorTransform),
+				mapAttioErrors(
+					AttioValidationErrorTransform,
+					AttioInvalidRequestErrorTransform,
+					AttioNotFoundErrorTransform,
+				),
 			)
 		}),
 
@@ -156,8 +161,9 @@ const makeAttioTasks = Effect.gen(function* () {
 				Effect.flatMap(HttpClientResponse.schemaBodyJson(DataStruct(Task))),
 				Effect.map((result) => result.data),
 				mapAttioErrors(
-					AttioNotFoundErrorTransform,
 					AttioValidationErrorTransform,
+					AttioInvalidRequestErrorTransform,
+					AttioNotFoundErrorTransform,
 				),
 			)
 		}),

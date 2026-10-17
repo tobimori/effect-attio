@@ -9,10 +9,13 @@ import * as HttpClientRequest from "effect/http/HttpClientRequest"
 import * as HttpClientResponse from "effect/http/HttpClientResponse"
 import {
 	AttioConflictErrorTransform,
+	AttioFilterErrorTransform,
 	AttioImmutableValueErrorTransform,
+	AttioInvalidRequestErrorTransform,
 	AttioMissingValueErrorTransform,
 	AttioMultipleMatchErrorTransform,
 	AttioNotFoundErrorTransform,
+	AttioSystemEditErrorTransform,
 	AttioUniquenessConflictErrorTransform,
 	AttioValidationErrorTransform,
 	mapAttioErrors,
@@ -144,7 +147,10 @@ const makeAttioRecords = Effect.gen(function* () {
 					),
 				),
 				Effect.map((result) => result.data),
-				mapAttioErrors(AttioValidationErrorTransform),
+				mapAttioErrors(
+					AttioValidationErrorTransform,
+					AttioNotFoundErrorTransform,
+				),
 			)
 		}),
 
@@ -189,6 +195,7 @@ const makeAttioRecords = Effect.gen(function* () {
 					),
 				),
 				Effect.map((result) => result.data),
+				mapAttioErrors(AttioFilterErrorTransform, AttioNotFoundErrorTransform),
 			)
 		}),
 
@@ -235,6 +242,9 @@ const makeAttioRecords = Effect.gen(function* () {
 					AttioMissingValueErrorTransform,
 					AttioMultipleMatchErrorTransform,
 					AttioUniquenessConflictErrorTransform,
+					AttioInvalidRequestErrorTransform,
+					AttioNotFoundErrorTransform,
+					AttioConflictErrorTransform,
 				),
 			)
 		}),
@@ -270,7 +280,10 @@ const makeAttioRecords = Effect.gen(function* () {
 					),
 				),
 				Effect.map((result) => result.data),
-				mapAttioErrors(AttioNotFoundErrorTransform),
+				mapAttioErrors(
+					AttioInvalidRequestErrorTransform,
+					AttioNotFoundErrorTransform,
+				),
 			)
 		}),
 
@@ -314,8 +327,11 @@ const makeAttioRecords = Effect.gen(function* () {
 				Effect.map((result) => result.data),
 				mapAttioErrors(
 					AttioValidationErrorTransform,
-					AttioConflictErrorTransform,
+					AttioMultipleMatchErrorTransform,
 					AttioUniquenessConflictErrorTransform,
+					AttioInvalidRequestErrorTransform,
+					AttioNotFoundErrorTransform,
+					AttioConflictErrorTransform,
 				),
 			)
 		}),
@@ -367,9 +383,14 @@ const makeAttioRecords = Effect.gen(function* () {
 				),
 				Effect.map((result) => result.data),
 				mapAttioErrors(
-					AttioNotFoundErrorTransform,
 					AttioValidationErrorTransform,
+					AttioMissingValueErrorTransform,
 					AttioImmutableValueErrorTransform,
+					AttioMultipleMatchErrorTransform,
+					AttioUniquenessConflictErrorTransform,
+					AttioInvalidRequestErrorTransform,
+					AttioNotFoundErrorTransform,
+					AttioConflictErrorTransform,
 				),
 			)
 		}),
@@ -421,9 +442,14 @@ const makeAttioRecords = Effect.gen(function* () {
 				),
 				Effect.map((result) => result.data),
 				mapAttioErrors(
-					AttioNotFoundErrorTransform,
 					AttioValidationErrorTransform,
+					AttioMissingValueErrorTransform,
 					AttioImmutableValueErrorTransform,
+					AttioMultipleMatchErrorTransform,
+					AttioUniquenessConflictErrorTransform,
+					AttioInvalidRequestErrorTransform,
+					AttioNotFoundErrorTransform,
+					AttioConflictErrorTransform,
 				),
 			)
 		}),
@@ -463,6 +489,7 @@ const makeAttioRecords = Effect.gen(function* () {
 				Effect.map((result) => result.data),
 				mapAttioErrors(
 					AttioValidationErrorTransform,
+					AttioInvalidRequestErrorTransform,
 					AttioNotFoundErrorTransform,
 				),
 			)
@@ -507,6 +534,10 @@ const makeAttioRecords = Effect.gen(function* () {
 						),
 					),
 					Effect.map((result) => result.data),
+					mapAttioErrors(
+						AttioValidationErrorTransform,
+						AttioNotFoundErrorTransform,
+					),
 				)
 			},
 		),
@@ -535,6 +566,10 @@ const makeAttioRecords = Effect.gen(function* () {
 					Effect.map((result) => result.data),
 					mapAttioErrors(
 						AttioValidationErrorTransform,
+						AttioMissingValueErrorTransform,
+						AttioSystemEditErrorTransform,
+						AttioUniquenessConflictErrorTransform,
+						AttioInvalidRequestErrorTransform,
 						AttioNotFoundErrorTransform,
 					),
 				)

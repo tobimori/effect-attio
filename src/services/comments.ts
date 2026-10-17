@@ -87,7 +87,10 @@ const makeAttioComments = Effect.gen(function* () {
 				Effect.flatMap(http.execute),
 				Effect.flatMap(HttpClientResponse.schemaBodyJson(DataStruct(Comment))),
 				Effect.map((result) => result.data),
-				mapAttioErrors(AttioValidationErrorTransform),
+				mapAttioErrors(
+					AttioValidationErrorTransform,
+					AttioNotFoundErrorTransform,
+				),
 			)
 		}),
 

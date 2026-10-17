@@ -6,6 +6,7 @@ import * as HttpClientRequest from "effect/http/HttpClientRequest"
 import * as HttpClientResponse from "effect/http/HttpClientResponse"
 import {
 	AttioNotFoundErrorTransform,
+	AttioUniquenessConflictErrorTransform,
 	AttioValidationErrorTransform,
 	mapAttioErrors,
 } from "../error-transforms.js"
@@ -97,7 +98,10 @@ const makeAttioWebhooks = Effect.gen(function* () {
 					HttpClientResponse.schemaBodyJson(DataStruct(WebhookWithSecret)),
 				),
 				Effect.map((result) => result.data),
-				mapAttioErrors(AttioValidationErrorTransform),
+				mapAttioErrors(
+					AttioValidationErrorTransform,
+					AttioUniquenessConflictErrorTransform,
+				),
 			)
 		}),
 
@@ -134,8 +138,9 @@ const makeAttioWebhooks = Effect.gen(function* () {
 				Effect.flatMap(HttpClientResponse.schemaBodyJson(DataStruct(Webhook))),
 				Effect.map((result) => result.data),
 				mapAttioErrors(
-					AttioNotFoundErrorTransform,
 					AttioValidationErrorTransform,
+					AttioUniquenessConflictErrorTransform,
+					AttioNotFoundErrorTransform,
 				),
 			)
 		}),

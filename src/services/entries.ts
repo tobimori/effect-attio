@@ -8,10 +8,13 @@ import * as HttpClientRequest from "effect/http/HttpClientRequest"
 import * as HttpClientResponse from "effect/http/HttpClientResponse"
 import {
 	AttioConflictErrorTransform,
+	AttioFilterErrorTransform,
 	AttioImmutableValueErrorTransform,
+	AttioInvalidRequestErrorTransform,
 	AttioMissingValueErrorTransform,
 	AttioMultipleMatchErrorTransform,
 	AttioNotFoundErrorTransform,
+	AttioSystemEditErrorTransform,
 	AttioUniquenessConflictErrorTransform,
 	AttioValidationErrorTransform,
 	mapAttioErrors,
@@ -139,6 +142,7 @@ const makeAttioEntries = Effect.gen(function* () {
 					),
 				),
 				Effect.map((result) => result.data),
+				mapAttioErrors(AttioFilterErrorTransform, AttioNotFoundErrorTransform),
 			)
 		}),
 
@@ -192,9 +196,11 @@ const makeAttioEntries = Effect.gen(function* () {
 				),
 				Effect.map((result) => result.data),
 				mapAttioErrors(
+					AttioValidationErrorTransform,
 					AttioMultipleMatchErrorTransform,
-					AttioNotFoundErrorTransform,
 					AttioUniquenessConflictErrorTransform,
+					AttioInvalidRequestErrorTransform,
+					AttioNotFoundErrorTransform,
 				),
 			)
 		}),
@@ -246,10 +252,11 @@ const makeAttioEntries = Effect.gen(function* () {
 				),
 				Effect.map((result) => result.data),
 				mapAttioErrors(
-					AttioConflictErrorTransform,
-					AttioUniquenessConflictErrorTransform,
+					AttioValidationErrorTransform,
 					AttioMissingValueErrorTransform,
+					AttioUniquenessConflictErrorTransform,
 					AttioNotFoundErrorTransform,
+					AttioConflictErrorTransform,
 				),
 			)
 		}),
@@ -335,7 +342,9 @@ const makeAttioEntries = Effect.gen(function* () {
 				),
 				Effect.map((result) => result.data),
 				mapAttioErrors(
+					AttioValidationErrorTransform,
 					AttioImmutableValueErrorTransform,
+					AttioInvalidRequestErrorTransform,
 					AttioNotFoundErrorTransform,
 				),
 			)
@@ -404,7 +413,9 @@ const makeAttioEntries = Effect.gen(function* () {
 				),
 				Effect.map((result) => result.data),
 				mapAttioErrors(
+					AttioValidationErrorTransform,
 					AttioImmutableValueErrorTransform,
+					AttioInvalidRequestErrorTransform,
 					AttioNotFoundErrorTransform,
 				),
 			)
@@ -447,7 +458,10 @@ const makeAttioEntries = Effect.gen(function* () {
 						),
 					),
 					Effect.map((result) => result.data),
-					mapAttioErrors(AttioNotFoundErrorTransform),
+					mapAttioErrors(
+						AttioValidationErrorTransform,
+						AttioNotFoundErrorTransform,
+					),
 				)
 			},
 		),
@@ -476,6 +490,10 @@ const makeAttioEntries = Effect.gen(function* () {
 					Effect.map((result) => result.data),
 					mapAttioErrors(
 						AttioValidationErrorTransform,
+						AttioMissingValueErrorTransform,
+						AttioSystemEditErrorTransform,
+						AttioUniquenessConflictErrorTransform,
+						AttioInvalidRequestErrorTransform,
 						AttioNotFoundErrorTransform,
 					),
 				)

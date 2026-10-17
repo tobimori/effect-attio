@@ -6,6 +6,7 @@ import * as HttpClientRequest from "effect/http/HttpClientRequest"
 import * as HttpClientResponse from "effect/http/HttpClientResponse"
 import {
 	AttioConflictErrorTransform,
+	AttioInvalidRequestErrorTransform,
 	AttioNotFoundErrorTransform,
 	AttioSystemEditErrorTransform,
 	AttioValidationErrorTransform,
@@ -91,6 +92,7 @@ const makeAttioObjects = Effect.gen(function* () {
 				Effect.map((result) => result.data),
 				mapAttioErrors(
 					AttioValidationErrorTransform,
+					AttioInvalidRequestErrorTransform,
 					AttioConflictErrorTransform,
 				),
 			)
@@ -130,8 +132,8 @@ const makeAttioObjects = Effect.gen(function* () {
 				),
 				Effect.map((result) => result.data),
 				mapAttioErrors(
-					AttioNotFoundErrorTransform,
 					AttioValidationErrorTransform,
+					AttioNotFoundErrorTransform,
 					AttioConflictErrorTransform,
 				),
 			)
@@ -149,8 +151,8 @@ const makeAttioObjects = Effect.gen(function* () {
 				.del(`/v2/objects/${object}`)
 				.pipe(
 					mapAttioErrors(
-						AttioNotFoundErrorTransform,
 						AttioSystemEditErrorTransform,
+						AttioNotFoundErrorTransform,
 					),
 				)
 		}),

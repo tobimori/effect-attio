@@ -40,6 +40,12 @@ export const NoteInput = Schema.Struct({
 	meeting_id: Schema.optional(Schema.NullOr(Uuid)),
 })
 
+export const NoteUpdate = Schema.Struct({
+	title: Schema.optional(Schema.String),
+	content: Schema.optional(Schema.String),
+	format: Schema.optional(NoteInput.fields.format),
+})
+
 export const NoteListParams = Schema.Struct({
 	limit: Schema.optional(Schema.Number),
 	offset: Schema.optional(Schema.Number),
@@ -97,6 +103,30 @@ const makeAttioNotes = Effect.gen(function* () {
 				Effect.flatMap(HttpClientResponse.schemaBodyJson(DataStruct(Note))),
 				Effect.map((result) => result.data),
 				mapAttioErrors(AttioNotFoundErrorTransform),
+			)
+		}),
+
+		/**
+		 * Update the title and/or content of a note. Fields that you omit do not
+		 * change. `content` replaces the full content of the note. You cannot
+		 * change the parent record of a note.
+		 *
+		 * Required scopes: `note:read-write`, `object_configuration:read`, `record_permission:read`
+		 */
+		update: Effect.fn("AttioNotes.update")(function* (
+			noteId: string,
+			note: (typeof NoteUpdate)["Type"],
+		) {
+			const data = yield* Schema.encodeEffect(NoteUpdate)(note)
+			return yield* HttpClientRequest.patch(`/v2/notes/${noteId}`).pipe(
+				HttpClientRequest.bodyJson({ data }),
+				Effect.flatMap(http.execute),
+				Effect.flatMap(HttpClientResponse.schemaBodyJson(DataStruct(Note))),
+				Effect.map((result) => result.data),
+				mapAttioErrors(
+					AttioValidationErrorTransform,
+					AttioNotFoundErrorTransform,
+				),
 			)
 		}),
 

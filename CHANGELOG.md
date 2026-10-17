@@ -1,5 +1,36 @@
 # effect-attio
 
+## 1.3.0
+
+### Minor Changes
+
+- 394a896: Add `notes.update` to change the title and/or content of a note.
+- be71148: Add `meetings.update` to replace the linked records of a meeting, `meetings.patch` to add linked records, and `meetings.delete` to delete a meeting.
+- bf5060c: **Breaking:** `comments.create` now uses the input that Attio accepts: `format`, `content`, `author`, an optional `created_at`, and one of `thread_id`, `record` or `entry`. The old input always failed. Comments on list entries now decode `entry.entry_id`.
+- 6fd7b46: **Breaking:** `meetings.create` requires at least one participant, because Attio rejects meetings without participants.
+- 2dc0bb4: Add the `AttioSequences` service with `addUnsubscribedEmails` to add email addresses to the sequence unsubscribe list. The configured client exposes it as `sequences`.
+- e59696e: Map more Attio error responses to typed errors. Unknown error responses still become defects.
+
+  - Every method can fail with `AttioForbiddenError` for any 403 response, for example a missing scope (`unauthorized`), and with the new `AttioPaymentRequiredError` for a 402 response.
+  - The new `AttioInvalidRequestError` covers other 400 errors, such as `duplicate_values`, `limit_reached`, `merge_in_progress` and `self_merge`.
+  - **Breaking:** errors are now classified by Attio's error code and not by HTTP status, so each code maps to one error:
+    - `not_found` and `value_not_found` give `AttioNotFoundError`. Before, a 400 `value_not_found` gave `AttioMissingValueError`, which now covers only `missing_value` and has no `code` field.
+    - `uniqueness_conflict` gives `AttioUniquenessConflictError`, and `multiple_match_results` gives `AttioMultipleMatchError`, for both 400 and 409 responses.
+    - `AttioConflictError` covers `slug_conflict` and `concurrent_write_conflict`. Its `code` is now a union of these literals.
+  - `AttioValidationError` also covers 413 responses, and `AttioFilterError` also covers `invalid_filter_operator`.
+  - Methods now map all errors that Attio documents for their endpoint.
+
+- 017da0a: Add the `exclude_automated_participants` parameter to `emails.list`.
+- e34d9e2: Add `objects.delete` to delete a custom object and all of its records.
+- 1f55be3: Add `token_level` to the `meta.identify` response.
+- 61555ca: **Breaking:** `threads.get` now returns one page of comments as `{ data, pagination }` and not the thread alone. Use the new `limit` and `cursor` parameters to page through comments, and `created_after` to get only newer comments. A thread from `threads.get` can have no comments when `created_after` excludes all of them. Threads from `threads.list` now include `has_more_comments`.
+
+### Patch Changes
+
+- 4247ae2: Map `validation_type` errors without `validation_errors` to `AttioValidationError` with an empty `errors` list.
+- a654b69: Fix the standard object schemas to match Attio: remove `associated_users` from companies, which Attio does not have, and rename the deals `state` attribute to `stage`. Before, companies records failed to decode when the users object was enabled, and deal records always failed to decode.
+- 1fdb471: Decode phone number values with `phone_number`, which Attio returns, and not `normalized_phone_number`. Accept the `meeting` and `activity` interaction types, so people and companies with calendar interactions decode.
+
 ## 1.2.1
 
 ### Patch Changes

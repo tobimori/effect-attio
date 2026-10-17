@@ -2,7 +2,7 @@ import * as Schema from "effect/Schema"
 import * as SchemaTransformation from "effect/SchemaTransformation"
 import { Actor, Uuid } from "../shared/schemas.js"
 import { makeAttribute, withReferenceTarget } from "./attribute-builder.js"
-import { CountryCode, CurrencyCode } from "./values.js"
+import { CountryCode, CurrencyCode, InteractionType } from "./values.js"
 
 /**
  * # Actor reference (User)
@@ -211,7 +211,7 @@ export const Interaction = makeAttribute({
 	input: Schema.Void,
 	output: Schema.Struct({
 		attribute_type: Schema.Literal("interaction"),
-		interaction_type: Schema.Literals(["email", "calendar-event"]),
+		interaction_type: InteractionType,
 		interacted_at: Schema.DateTimeUtcFromString,
 		owner_actor: Actor,
 	}),
@@ -351,7 +351,7 @@ export const PhoneNumber = makeAttribute(
 		output: Schema.Struct({
 			attribute_type: Schema.Literal("phone-number"),
 			original_phone_number: Schema.String,
-			normalized_phone_number: Schema.String,
+			phone_number: Schema.String,
 			country_code: CountryCode,
 		}),
 	},

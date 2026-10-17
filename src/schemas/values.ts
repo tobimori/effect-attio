@@ -304,3 +304,10 @@ export const CountryCode = Schema.Literals([
 	"XK",
 	"AC",
 ])
+
+export const InteractionType = Schema.Literals([
+	"activity",
+	"email",
+	"meeting",
+	"calendar-event",
+])

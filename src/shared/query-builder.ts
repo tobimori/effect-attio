@@ -1,6 +1,7 @@
 import * as DateTime from "effect/DateTime"
 import type * as Schema from "effect/Schema"
 import type { AttributeDef } from "../schemas/attribute-builder.js"
+import type { InteractionType } from "../schemas/values.js"
 
 type Json = (typeof Schema.Json)["Type"]
 
@@ -162,7 +163,7 @@ type PhoneNumberQueryAttribute = StringColumn & {
 type InteractionQueryAttribute = {
 	readonly owner_member_id: StringColumn<"eq" | "notEmpty">
 	readonly interaction_type: QueryColumn<
-		"email" | "calendar-event",
+		(typeof InteractionType)["Type"],
 		"eq" | "notEmpty"
 	>
 	readonly interacted_at: DateColumn

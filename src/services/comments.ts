@@ -23,8 +23,8 @@ export const CommentId = Schema.Struct({
 })
 
 export const EntryReference = Schema.Struct({
-	list_entry_id: Schema.String,
-	list_id: Schema.String,
+	entry_id: Uuid,
+	list_id: Uuid,
 })
 
 export const RecordReference = Schema.Struct({
@@ -44,13 +44,28 @@ export const Comment = Schema.Struct({
 	author: Actor,
 })
 
-export const CommentInput = Schema.Struct({
-	thread_id: Uuid,
-	content_plaintext: Schema.String,
-	entry_id: Schema.optional(Schema.String),
-	record_id: Schema.optional(Schema.String),
-	author_id: Schema.optional(Schema.String),
-})
+const CommentInputFields = {
+	format: Schema.Literal("plaintext"),
+	content: Schema.String,
+	author: Schema.Struct({
+		type: Schema.Literal("workspace-member"),
+		id: Uuid,
+	}),
+	created_at: Schema.optional(Schema.DateTimeUtcFromString),
+}
+
+/** A reply to a thread, or a new thread on a record or a list entry. */
+export const CommentInput = Schema.Union([
+	Schema.Struct({ ...CommentInputFields, thread_id: Uuid }),
+	Schema.Struct({
+		...CommentInputFields,
+		record: Schema.Struct({ object: Schema.String, record_id: Uuid }),
+	}),
+	Schema.Struct({
+		...CommentInputFields,
+		entry: Schema.Struct({ list: Schema.String, entry_id: Uuid }),
+	}),
+])
 
 const makeAttioComments = Effect.gen(function* () {
 	const http = yield* AttioHttpClient
@@ -64,9 +79,9 @@ const makeAttioComments = Effect.gen(function* () {
 		 * For list entries: `list_configuration:read`, `list_entry:read`
 		 */
 		create: Effect.fn("AttioComments.create")(function* (
-			comment: (typeof CommentInput)["Encoded"],
+			comment: (typeof CommentInput)["Type"],
 		) {
-			const data = yield* Schema.encodeUnknownEffect(CommentInput)(comment)
+			const data = yield* Schema.encodeEffect(CommentInput)(comment)
 			return yield* HttpClientRequest.post("/v2/comments").pipe(
 				HttpClientRequest.bodyJson({ data }),
 				Effect.flatMap(http.execute),

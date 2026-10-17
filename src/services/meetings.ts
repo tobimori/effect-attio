@@ -116,7 +116,7 @@ export const MeetingLinkedRecordsInput = Schema.Struct({
 const MeetingInputFields = {
 	title: Schema.String.check(Schema.isMaxLength(1000)),
 	description: Schema.String.check(Schema.isMaxLength(10000)),
-	participants: Schema.Array(MeetingParticipantInput).check(
+	participants: Schema.NonEmptyArray(MeetingParticipantInput).check(
 		Schema.isMaxLength(500),
 	),
 	linked_records: Schema.optional(MeetingLinkedRecords),

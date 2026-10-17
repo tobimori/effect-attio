@@ -1,5 +1,11 @@
 # effect-attio
 
+## 1.2.1
+
+### Patch Changes
+
+- 621abad: Encode select option and status titles as single URL path segments when updating them.
+
 ## 1.2.0
 
 ### Minor Changes

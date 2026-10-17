@@ -36,6 +36,8 @@ const EmailListFields = {
 	domain: Schema.optional(Schema.String),
 	sent_after: Schema.optional(Schema.NullOr(Schema.DateTimeUtcFromString)),
 	sent_before: Schema.optional(Schema.NullOr(Schema.DateTimeUtcFromString)),
+	/** Only return emails with at least one external participant that is not an automated sender. */
+	exclude_automated_participants: Schema.optional(Schema.Boolean),
 }
 export const EmailListParams = Schema.Union([
 	Schema.Struct({

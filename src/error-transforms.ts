@@ -51,20 +51,23 @@ export const AttioNotFoundErrorTransform = transformAttioError(
 	},
 )
 
-// 400 Bad Request - code: "validation_type" with validation_errors array
+// 400 Bad Request - code: "validation_type", with a validation_errors array
+// only when the request body fails the schema check
 export const AttioValidationErrorTransform = transformAttioError(
 	Schema.Struct({
 		status_code: Schema.Literal(400),
 		type: Schema.Literal("invalid_request_error"),
 		code: Schema.Literal("validation_type"),
 		message: Schema.String,
-		validation_errors: Schema.Array(
-			Schema.Struct({
-				code: Schema.String,
-				path: Schema.Array(Schema.Union([Schema.String, Schema.Number])),
-				message: Schema.String,
-				string_validation: Schema.optional(Schema.String),
-			}),
+		validation_errors: Schema.optional(
+			Schema.Array(
+				Schema.Struct({
+					code: Schema.String,
+					path: Schema.Array(Schema.Union([Schema.String, Schema.Number])),
+					message: Schema.String,
+					string_validation: Schema.optional(Schema.String),
+				}),
+			),
 		),
 	}),
 	AttioValidationError,
@@ -72,7 +75,7 @@ export const AttioValidationErrorTransform = transformAttioError(
 		decode: (attioError) =>
 			new AttioValidationError({
 				message: attioError.message,
-				errors: attioError.validation_errors.map((err) => ({
+				errors: (attioError.validation_errors ?? []).map((err) => ({
 					code: err.code,
 					path: err.path,
 					message: err.message,

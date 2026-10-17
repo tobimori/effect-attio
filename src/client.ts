@@ -43,6 +43,7 @@ import {
 	type GenericAttioRecords,
 	type GenericAttioRecordSearch,
 } from "./services/records.js"
+import { AttioSequences } from "./services/sequences.js"
 import { AttioSql } from "./services/sql.js"
 import { AttioTasks, type GenericAttioTasks } from "./services/tasks.js"
 import { AttioThreads, type GenericAttioThreads } from "./services/threads.js"
@@ -158,6 +159,7 @@ type AttioClientShape<T extends AttioClientSchemas> = {
 	files: GenericAttioFiles<ConfiguredObjectName<T>>
 	meetings: GenericAttioMeetings<ConfiguredObjectName<T>>
 	records: GenericAttioRecordSearch<ConfiguredObjectName<T>>
+	sequences: AttioSequences["Service"]
 	sql: AttioSql["Service"]
 	threads: GenericAttioThreads<ConfiguredObjectName<T>>
 	tasks: GenericAttioTasks<ConfiguredObjectName<T>>
@@ -215,6 +217,7 @@ export const AttioClient =
 						const notes = yield* AttioNotes
 						const objects = yield* AttioObjects
 						const records = yield* AttioRecords
+						const sequences = yield* AttioSequences
 						const sql = yield* AttioSql
 						const entries = yield* AttioEntries
 						const lists = yield* AttioLists
@@ -237,6 +240,7 @@ export const AttioClient =
 									notes,
 									objects,
 									records: { search: records.search },
+									sequences,
 									sql,
 									lists: new Proxy(lists as any, {
 										get(target, listName: string) {
@@ -433,6 +437,7 @@ export const AttioClient =
 							AttioNotes.layer,
 							AttioObjects.layer,
 							AttioRecords.layer,
+							AttioSequences.layer,
 							AttioSql.layer,
 							AttioEntries.layer,
 							AttioLists.layer,

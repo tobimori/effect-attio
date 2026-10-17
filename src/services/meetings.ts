@@ -5,7 +5,9 @@ import * as Schema from "effect/Schema"
 import * as HttpClientRequest from "effect/http/HttpClientRequest"
 import * as HttpClientResponse from "effect/http/HttpClientResponse"
 import {
+	AttioMissingValueErrorTransform,
 	AttioNotFoundErrorTransform,
+	AttioSystemEditErrorTransform,
 	AttioValidationErrorTransform,
 	mapAttioErrors,
 } from "../error-transforms.js"
@@ -100,20 +102,24 @@ const MeetingParticipantInput = Schema.Union([
 		name: Schema.NonEmptyString,
 	}),
 ])
+const MeetingLinkedRecords = Schema.Array(
+	Schema.Struct({
+		object: Schema.String,
+		record_id: Uuid,
+	}),
+).check(Schema.isMaxLength(50))
+
+export const MeetingLinkedRecordsInput = Schema.Struct({
+	linked_records: MeetingLinkedRecords,
+})
+
 const MeetingInputFields = {
 	title: Schema.String.check(Schema.isMaxLength(1000)),
 	description: Schema.String.check(Schema.isMaxLength(10000)),
 	participants: Schema.Array(MeetingParticipantInput).check(
 		Schema.isMaxLength(500),
 	),
-	linked_records: Schema.optional(
-		Schema.Array(
-			Schema.Struct({
-				object: Schema.String,
-				record_id: Uuid,
-			}),
-		).check(Schema.isMaxLength(50)),
-	),
+	linked_records: Schema.optional(MeetingLinkedRecords),
 }
 export const MeetingInput = Schema.Union([
 	Schema.Struct({
@@ -185,6 +191,24 @@ const CallRecordingInput = Schema.Struct({
 const makeAttioMeetings = Effect.gen(function* () {
 	const http = yield* AttioHttpClient
 
+	const writeLinkedRecords = Effect.fnUntraced(function* (
+		request: HttpClientRequest.HttpClientRequest,
+		input: (typeof MeetingLinkedRecordsInput)["Type"],
+	) {
+		const data = yield* Schema.encodeEffect(MeetingLinkedRecordsInput)(input)
+		return yield* request.pipe(
+			HttpClientRequest.bodyJson({ data }),
+			Effect.flatMap(http.execute),
+			Effect.flatMap(HttpClientResponse.schemaBodyJson(DataStruct(Meeting))),
+			Effect.map((response) => response.data),
+			mapAttioErrors(
+				AttioValidationErrorTransform,
+				AttioMissingValueErrorTransform,
+				AttioNotFoundErrorTransform,
+			),
+		)
+	})
+
 	return {
 		list: Effect.fn("AttioMeetings.list")(function* (
 			params?: (typeof MeetingListParams)["Type"],
@@ -216,6 +240,56 @@ const makeAttioMeetings = Effect.gen(function* () {
 				Effect.map((response) => response.data),
 				mapAttioErrors(AttioNotFoundErrorTransform),
 			)
+		}),
+
+		/**
+		 * Replaces the linked records of a meeting. Records that are not in the
+		 * input are unlinked, also records that Attio linked automatically. An
+		 * empty array unlinks all records. You cannot change other fields.
+		 *
+		 * Required scopes: `meeting:read-write`, `record_permission:read`
+		 */
+		update: Effect.fn("AttioMeetings.update")(function* (
+			meetingId: string,
+			input: (typeof MeetingLinkedRecordsInput)["Type"],
+		) {
+			return yield* writeLinkedRecords(
+				HttpClientRequest.put(`/v2/meetings/${meetingId}`),
+				input,
+			)
+		}),
+
+		/**
+		 * Adds linked records to a meeting. Records that are already linked do
+		 * not change. You cannot change other fields.
+		 *
+		 * Required scopes: `meeting:read-write`, `record_permission:read`
+		 */
+		patch: Effect.fn("AttioMeetings.patch")(function* (
+			meetingId: string,
+			input: (typeof MeetingLinkedRecordsInput)["Type"],
+		) {
+			return yield* writeLinkedRecords(
+				HttpClientRequest.patch(`/v2/meetings/${meetingId}`),
+				input,
+			)
+		}),
+
+		/**
+		 * Deletes a meeting. You cannot delete meetings that calendar sync
+		 * created.
+		 *
+		 * Required scopes: `meeting:read-write`
+		 */
+		delete: Effect.fn("AttioMeetings.delete")(function* (meetingId: string) {
+			yield* http
+				.del(`/v2/meetings/${meetingId}`)
+				.pipe(
+					mapAttioErrors(
+						AttioNotFoundErrorTransform,
+						AttioSystemEditErrorTransform,
+					),
+				)
 		}),
 
 		listCallRecordings: Effect.fn("AttioMeetings.listCallRecordings")(
@@ -298,20 +372,27 @@ export class AttioMeetings extends Context.Service<
 	)
 }
 
-type MeetingLinkedRecord = NonNullable<
-	(typeof MeetingInput)["Type"]["linked_records"]
->[number]
+type ConfiguredLinkedRecords<TObjectName extends string> = ReadonlyArray<
+	ReplaceField<
+		(typeof MeetingLinkedRecords)["Type"][number],
+		"object",
+		TObjectName
+	>
+>
 
 type ConfiguredMeetingInput<TObjectName extends string> = ReplaceField<
 	(typeof MeetingInput)["Type"],
 	"linked_records",
-	| ReadonlyArray<ReplaceField<MeetingLinkedRecord, "object", TObjectName>>
-	| undefined
+	ConfiguredLinkedRecords<TObjectName> | undefined
 >
+
+type ConfiguredLinkedRecordsInput<TObjectName extends string> = {
+	readonly linked_records: ConfiguredLinkedRecords<TObjectName>
+}
 
 export type GenericAttioMeetings<TObjectName extends string> = Omit<
 	AttioMeetings["Service"],
-	"list" | "create"
+	"list" | "create" | "update" | "patch"
 > & {
 	list: (
 		params?: ReplaceRequiredField<
@@ -323,4 +404,12 @@ export type GenericAttioMeetings<TObjectName extends string> = Omit<
 	create: (
 		meeting: ConfiguredMeetingInput<TObjectName>,
 	) => ReturnType<AttioMeetings["Service"]["create"]>
+	update: (
+		meetingId: string,
+		input: ConfiguredLinkedRecordsInput<TObjectName>,
+	) => ReturnType<AttioMeetings["Service"]["update"]>
+	patch: (
+		meetingId: string,
+		input: ConfiguredLinkedRecordsInput<TObjectName>,
+	) => ReturnType<AttioMeetings["Service"]["patch"]>
 }

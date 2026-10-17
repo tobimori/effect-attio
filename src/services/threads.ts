@@ -9,6 +9,7 @@ import {
 	mapAttioErrors,
 } from "../error-transforms.js"
 import { AttioHttpClient } from "../http-client.js"
+import { CursorParams } from "../shared/pagination.js"
 import { DataStruct, Uuid } from "../shared/schemas.js"
 import type { ReplaceField } from "../shared/type-utils.js"
 import { Comment } from "./comments.js"
@@ -18,8 +19,26 @@ export const ThreadId = Schema.Struct({
 
 export const Thread = Schema.Struct({
 	id: ThreadId,
-	comments: Schema.NonEmptyArray(Comment),
+	comments: Schema.Array(Comment),
 	created_at: Schema.DateTimeUtcFromString,
+})
+
+/** A thread in a list response, which includes at most 80 replies. */
+export const ListedThread = Schema.Struct({
+	...Thread.fields,
+	comments: Schema.NonEmptyArray(Comment),
+	has_more_comments: Schema.Boolean,
+})
+
+export const ThreadGetParams = Schema.Struct({
+	...CursorParams(250).fields,
+	created_after: Schema.optional(Schema.DateTimeUtcFromString),
+})
+
+/** One page of a thread's comments. */
+export const ThreadPage = Schema.Struct({
+	data: Thread,
+	pagination: Schema.Struct({ next_cursor: Schema.NullOr(Schema.String) }),
 })
 
 export const ThreadListParams = Schema.Struct({
@@ -38,6 +57,9 @@ const makeAttioThreads = Effect.gen(function* () {
 		/**
 		 * List threads of comments on a record or list entry.
 		 *
+		 * Each thread includes at most 80 replies. When `has_more_comments` is
+		 * `true`, use `get` to page through all comments of the thread.
+		 *
 		 * Required scopes: `comment:read`
 		 * For records: `object_configuration:read`, `record_permission:read`
 		 * For list entries: `list_configuration:read`, `list_entry:read`
@@ -49,23 +71,36 @@ const makeAttioThreads = Effect.gen(function* () {
 				HttpClientRequest.appendUrlParams(params ?? {}),
 				http.execute,
 				Effect.flatMap(
-					HttpClientResponse.schemaBodyJson(DataStruct(Schema.Array(Thread))),
+					HttpClientResponse.schemaBodyJson(
+						DataStruct(Schema.Array(ListedThread)),
+					),
 				),
 				Effect.map((result) => result.data),
 			)
 		}),
 
 		/**
-		 * Get all comments in a thread.
+		 * Get a thread and one page of its comments, oldest first. A page has at
+		 * most 250 comments. To get the next page, pass
+		 * `pagination.next_cursor` as `cursor` until it is `null`.
+		 *
+		 * Use `created_after` to get only the comments created after a
+		 * timestamp, for example to poll a thread for new replies. The comment
+		 * that opened the thread is included only if it matches the filter.
 		 *
 		 * Required scopes: `comment:read`
 		 * For records: `object_configuration:read`, `record_permission:read`
 		 * For list entries: `list_configuration:read`, `list_entry:read`
 		 */
-		get: Effect.fn("AttioThreads.get")(function* (threadId: string) {
-			return yield* http.get(`/v2/threads/${threadId}`).pipe(
-				Effect.flatMap(HttpClientResponse.schemaBodyJson(DataStruct(Thread))),
-				Effect.map((result) => result.data),
+		get: Effect.fn("AttioThreads.get")(function* (
+			threadId: string,
+			params?: (typeof ThreadGetParams)["Type"],
+		) {
+			const query = yield* Schema.encodeEffect(ThreadGetParams)(params ?? {})
+			return yield* HttpClientRequest.get(`/v2/threads/${threadId}`).pipe(
+				HttpClientRequest.appendUrlParams(query),
+				http.execute,
+				Effect.flatMap(HttpClientResponse.schemaBodyJson(ThreadPage)),
 				mapAttioErrors(AttioNotFoundErrorTransform),
 			)
 		}),

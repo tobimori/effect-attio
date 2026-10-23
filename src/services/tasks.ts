@@ -14,6 +14,7 @@ import { AttioHttpClient } from "../http-client.js"
 import {
 	Actor,
 	Assignee,
+	AssigneeInput,
 	DataStruct,
 	LinkedRecordInput,
 	LinkedRecordOutput,
@@ -41,14 +42,14 @@ export const TaskInput = Schema.Struct({
 	deadline_at: Schema.optional(Schema.DateTimeUtcFromString),
 	is_completed: Schema.Boolean,
 	linked_records: Schema.Array(LinkedRecordInput),
-	assignees: Schema.Array(Assignee),
+	assignees: Schema.Array(AssigneeInput),
 })
 
 export const TaskUpdate = Schema.Struct({
 	deadline_at: Schema.optional(Schema.DateTimeUtcFromString),
 	is_completed: Schema.optional(Schema.Boolean),
 	linked_records: Schema.optional(Schema.Array(LinkedRecordInput)),
-	assignees: Schema.optional(Schema.Array(Assignee)),
+	assignees: Schema.optional(Schema.Array(AssigneeInput)),
 })
 
 export const TaskListParams = Schema.Struct({

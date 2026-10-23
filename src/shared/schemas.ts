@@ -43,6 +43,12 @@ export const Assignee = Schema.Struct({
 	referenced_actor_id: Uuid,
 })
 
+// tasks also accept a workspace member by email address
+export const AssigneeInput = Schema.Union([
+	Assignee,
+	Schema.Struct({ workspace_member_email_address: Schema.String }),
+])
+
 // linked records for relationships between objects
 export const LinkedRecordInput = Schema.Struct({
 	target_object: Schema.String,

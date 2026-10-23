@@ -393,7 +393,7 @@ export const mapAttioErrors = <
 
 	return <A, E, R>(
 		effect: Effect.Effect<A, E | HttpClientError.HttpClientError, R>,
-	): Effect.Effect<A, E | MappedError, R> =>
+	): Effect.Effect<A, E | MappedError | HttpClientError.HttpClientError, R> =>
 		effect.pipe(
 			Effect.catchIf(HttpClientError.isHttpClientError, (error) => {
 				if (error.response === undefined) return Effect.fail(error)
@@ -401,7 +401,7 @@ export const mapAttioErrors = <
 				return error.response.json.pipe(
 					Effect.flatMap((json: unknown) =>
 						Schema.decodeUnknownEffect(schema)(json).pipe(
-							Effect.catch(() => Effect.die(error)),
+							Effect.catch(() => Effect.fail(error)),
 						),
 					),
 					Effect.flatMap(Effect.fail),

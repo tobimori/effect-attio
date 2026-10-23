@@ -831,4 +831,13 @@ describe("AttioClient", () => {
 			Effect.Effect<TestAttioClient["Service"], never, TestAttioClient>
 		>()
 	})
+
+	it("does not require services to update or patch a record", () => {
+		expect<
+			Effect.Services<ReturnType<typeof client.invoices.update>>
+		>().type.toBe<never>()
+		expect<
+			Effect.Services<ReturnType<typeof client.invoices.patch>>
+		>().type.toBe<never>()
+	})
 })

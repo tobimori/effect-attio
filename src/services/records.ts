@@ -129,6 +129,16 @@ type WithoutLimit<Options> = Options extends unknown
 	? Omit<Options, "limit">
 	: never
 
+const partialInput = <TInput extends Schema.Top>(input: TInput) =>
+	(input as unknown as Schema.Struct<Schema.Struct.Fields>).mapFields(
+		Struct.map(Schema.optional),
+	) as unknown as Schema.Codec<
+		Partial<TInput["Type"]>,
+		unknown,
+		TInput["DecodingServices"],
+		TInput["EncodingServices"]
+	>
+
 const makeAttioRecords = Effect.gen(function* () {
 	const http = yield* AttioHttpClient
 
@@ -361,11 +371,9 @@ const makeAttioRecords = Effect.gen(function* () {
 			).pipe(
 				HttpClientRequest.bodyJson({
 					data: {
-						values: yield* Schema.encodeEffect(
-							(
-								schema.input as unknown as Schema.Struct<Schema.Struct.Fields>
-							).mapFields(Struct.map(Schema.optional)),
-						)(data),
+						values: yield* Schema.encodeEffect(partialInput(schema.input))(
+							data,
+						),
 					},
 				}),
 				Effect.flatMap(http.execute),
@@ -420,11 +428,9 @@ const makeAttioRecords = Effect.gen(function* () {
 			).pipe(
 				HttpClientRequest.bodyJson({
 					data: {
-						values: yield* Schema.encodeEffect(
-							(
-								schema.input as unknown as Schema.Struct<Schema.Struct.Fields>
-							).mapFields(Struct.map(Schema.optional)),
-						)(data),
+						values: yield* Schema.encodeEffect(partialInput(schema.input))(
+							data,
+						),
 					},
 				}),
 				Effect.flatMap(http.execute),
